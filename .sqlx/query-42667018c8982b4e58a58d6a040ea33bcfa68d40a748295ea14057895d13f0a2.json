@@ -1,0 +1,33 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO aws_credential_pool (\n                id, account_alias, aws_account_id, region, auth_method, role_arn, external_id,\n                access_key_encrypted, secret_key_encrypted, kms_key_id,\n                max_tpm, max_rpm, priority_weight, is_healthy, consecutive_errors,\n                last_error_at, last_error_code, last_health_check_at, is_active, created_at\n            )\n            VALUES (\n                $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,\n                $11,$12,$13,$14,$15,$16,$17,$18,$19,$20\n            )\n            ON CONFLICT (aws_account_id) DO NOTHING\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Bytea",
+        "Bytea",
+        "Varchar",
+        "Int4",
+        "Int4",
+        "Int2",
+        "Bool",
+        "Int2",
+        "Timestamptz",
+        "Varchar",
+        "Timestamptz",
+        "Bool",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "42667018c8982b4e58a58d6a040ea33bcfa68d40a748295ea14057895d13f0a2"
+}

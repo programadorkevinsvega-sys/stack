@@ -1,0 +1,148 @@
+[workspace]
+resolver = "2"
+members = [
+    # Crates — se añaden conforme se construyen
+    "crates/common",
+    "crates/db",
+    "crates/events",
+    "crates/proto",
+    "crates/bedrock-client",
+    #
+    # Apps — se añaden conforme se construyen
+    "apps/credential-manager",
+    "apps/api-service",
+    "apps/auth-service",
+    "apps/key-services",
+    "apps/subscription-service",
+    "apps/payment-services",
+    "apps/model-router",
+    "apps/api-gateway",
+    "apps/billing-service",
+    "apps/usage-service",
+    "apps/invoice-service",
+    "apps/customer-bff",
+    "apps/admin-bff",
+    "apps/file-service",
+    "apps/s3-gateway",
+]
+
+[workspace.dependencies]
+# internal crates
+common = { path = "crates/common" }
+db = { path = "crates/db" }
+events = { path = "crates/events" }
+proto = { path = "crates/proto" }
+bedrock-client = { path = "crates/bedrock-client" }
+
+# async runtime
+tokio = { version = "1", features = ["full"] }
+
+# serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# database
+sqlx = { version = "0.8", features = ["runtime-tokio", "tls-rustls", "postgres", "uuid", "chrono", "rust_decimal", "derive", "ipnetwork"] }
+
+# rpc
+tonic = { version = "0.14", features = ["tls-ring", "tls-webpki-roots", "tls-connect-info"] }
+tonic-health = "0.14"
+prost = "0.14"
+tonic-build = "0.14"
+tonic-prost-build = "0.14"
+prost-build = "0.14"
+
+# messaging
+async-nats = { version = "0.49", features = ["server_2_10"] }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std"] }
+rustls-pemfile = "2"
+
+# cache
+deadpool-redis = { version = "0.23", features = ["script"] }
+redis = { version = "0.30", features = ["tokio-comp", "script"] }
+
+# aws — STS para refrescar API keys de Bedrock Mantle, KMS para cifrado, Secrets Manager para TLS/mTLS
+aws-sdk-sts = "1"
+aws-sdk-kms = "1"
+aws-sdk-s3 = "1"
+aws-sdk-secretsmanager = "1"
+aws-sdk-ssm = "1"
+aws-config = "1"
+aws-types = "1"
+aws-credential-types = "1"
+
+# Azure Key Vault — certificados TLS mediante Managed/Workload Identity
+azure_core = "1"
+azure_identity = { version = "1", features = ["tokio"] }
+azure_security_keyvault_secrets = "1"
+
+# HashiCorp Vault — KV v2 y PKI dinámico
+vaultrs = "0.8"
+x509-parser = "0.18"
+
+# http client (Bedrock Mantle es OpenAI-compatible via HTTPS)
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "stream"] }
+zip = "2"
+pdf-extract = "0.7"
+url = "2"
+
+# types
+uuid = { version = "1", features = ["v4", "v5", "v7", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+rust_decimal = { version = "1", features = ["serde"] }
+bytes = "1"
+futures-util = "0.3"
+tokio-stream = { version = "0.1", features = ["io-util", "net"] }
+tokio-rustls = "0.26"
+
+# errors
+thiserror = "2"
+async-trait = "0.1"
+anyhow = "1"
+
+# config
+envy = "0.4"
+
+# observability
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+tracing-opentelemetry = "0.28"
+opentelemetry = "0.27"
+opentelemetry_sdk = { version = "0.27", features = ["rt-tokio"] }
+opentelemetry-otlp = { version = "0.27", features = ["tonic"] }
+metrics = "0.24"
+metrics-exporter-prometheus = "0.16"
+
+# crypto
+argon2 = "0.5"
+hmac = "0.12"
+sha2 = "0.10"
+rand = "0.8"
+base64 = "0.22"
+hex = "0.4"
+libc = "0.2"
+httpdate = "1"
+tokenizers = { version = "0.21", default-features = false, features = ["onig"] }
+
+# testing
+proptest = "1"
+testcontainers = "0.23"
+dotenv = "0.15"
+rcgen = "0.14"
+tempfile = "3"
+moka = { version = "0.12", features = ["sync"] }
+zeroize = { version = "1", features = ["zeroize_derive"] }
+tokio-util = { version = "0.7", features = ["io"] }
+
+# http
+axum = "0.8"
+http = "1"
+hyper = "1"
+tower = "0.5"
+tower-http = { version = "0.6", features = ["cors", "trace", "request-id", "limit", "timeout", "compression-gzip", "compression-br"] }
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "UNLICENSED"
+repository = "https://github.com/neuronix-ai/ai-gateway"

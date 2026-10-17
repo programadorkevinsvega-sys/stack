@@ -1,0 +1,133 @@
+{
+  "uid": "file-service-ingestion",
+  "title": "Nexus File Service · Ingestion & Qdrant",
+  "tags": ["nexus", "file-service", "ingestion", "qdrant"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-6h", "to": "now" },
+  "templating": { "list": [] },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "title": "Embedding cache hit ratio",
+      "gridPos": { "h": 5, "w": 6, "x": 0, "y": 0 },
+      "targets": [{ "refId": "A", "expr": "sum(rate(embedding_cache_hits_total[15m])) / clamp_min(sum(rate(embedding_cache_hits_total[15m])) + sum(rate(embedding_cache_misses_total[15m])), 1)" }],
+      "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1 }, "overrides": [] }
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "title": "Avoided tokens and cost",
+      "gridPos": { "h": 8, "w": 9, "x": 6, "y": 0 },
+      "targets": [
+        { "refId": "A", "expr": "sum by (plan) (increase(embedding_tokens_avoided_total[1h]))", "legendFormat": "tokens avoided {{plan}}" },
+        { "refId": "B", "expr": "sum by (plan) (increase(embedding_cost_avoided_micros_total[1h]))", "legendFormat": "cost avoided {{plan}} (micros)" },
+        { "refId": "C", "expr": "sum by (plan) (increase(embedding_cost_micros_total[1h]))", "legendFormat": "cost billed {{plan}} (micros)" },
+        { "refId": "D", "expr": "sum by (plan, result) (rate(embedding_operations_total[5m]))", "legendFormat": "operations {{plan}} {{result}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "title": "OpenRouter latency / errors / retries",
+      "gridPos": { "h": 8, "w": 9, "x": 15, "y": 0 },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.95, sum by (le) (rate(embedding_provider_request_duration_seconds_bucket[5m])))", "legendFormat": "p95 latency" },
+        { "refId": "B", "expr": "sum by (category) (rate(embedding_provider_errors_total[5m]))", "legendFormat": "errors {{category}}" },
+        { "refId": "C", "expr": "sum by (status) (rate(embedding_provider_retries_total[5m]))", "legendFormat": "retries {{status}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] }
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "title": "Ingestion jobs and backpressure",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        { "refId": "A", "expr": "file_ingestion_jobs{status=\"pending\"}", "legendFormat": "pending" },
+        { "refId": "B", "expr": "file_ingestion_jobs{status=\"processing\"}", "legendFormat": "processing" },
+        { "refId": "C", "expr": "file_event_outbox_pending", "legendFormat": "outbox" },
+        { "refId": "D", "expr": "rate(file_ingestion_backpressure_total[5m])", "legendFormat": "backpressure" },
+        { "refId": "E", "expr": "gnatsd_consumerz_num_pending{consumer=~\"file-.*\"}", "legendFormat": "JetStream pending {{consumer}}" },
+        { "refId": "F", "expr": "file_ingestion_messages_in_flight", "legendFormat": "ingestion in flight" },
+        { "refId": "G", "expr": "file_ingestion_max_ack_pending", "legendFormat": "ingestion max ACK pending" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "title": "Batches, retries, DLQ and redelivery",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "targets": [
+        { "refId": "A", "expr": "rate(embedding_batches_total[5m])", "legendFormat": "batches" },
+        { "refId": "B", "expr": "rate(file_ingestion_redeliveries_total[5m])", "legendFormat": "redelivery" },
+        { "refId": "C", "expr": "rate(file_ingestion_failures_total{dead_letter=\"true\"}[5m])", "legendFormat": "DLQ" },
+        { "refId": "D", "expr": "file_ingestion_messages_in_flight", "legendFormat": "in flight" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "title": "Canonical vectors, references, bytes and orphans",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "targets": [
+        { "refId": "A", "expr": "sum(canonical_embedding_vectors)", "legendFormat": "vectors" },
+        { "refId": "B", "expr": "canonical_embedding_references", "legendFormat": "references" },
+        { "refId": "C", "expr": "canonical_embedding_orphans", "legendFormat": "orphans" },
+        { "refId": "D", "expr": "canonical_embedding_bytes", "legendFormat": "bytes" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "title": "Isolation violations and defensive drops",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "targets": [
+        { "refId": "A", "expr": "rate(qdrant_cross_user_attempts_total[5m])", "legendFormat": "cross-user attempts {{action}}" },
+        { "refId": "B", "expr": "rate(qdrant_defensive_discards_total[5m])", "legendFormat": "defensive drops {{reason}}" },
+        { "refId": "C", "expr": "rate(canonical_embedding_maintenance_failures_total[5m])", "legendFormat": "maintenance failures" },
+        { "refId": "D", "expr": "rate(canonical_embedding_lease_expired_total[5m])", "legendFormat": "expired leases" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "ops" }, "overrides": [] }
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "title": "Audit operations by pseudonymous user",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+      "targets": [
+        { "refId": "A", "expr": "sum by (action) (rate(file_audit_events_total[5m]))", "legendFormat": "{{action}}" },
+        { "refId": "B", "expr": "sum by (user_hash) (rate(file_audit_events_total[5m]))", "legendFormat": "hashed user {{user_hash}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "ops" }, "overrides": [] }
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "title": "Quota rejections and pending capacity",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
+      "targets": [
+        { "refId": "A", "expr": "sum by (reason) (rate(file_ingestion_quota_rejections_total[5m]))", "legendFormat": "quota {{reason}}" },
+        { "refId": "B", "expr": "file_ingestion_quota_reservations{status=\"reserved\"}", "legendFormat": "reserved" },
+        { "refId": "C", "expr": "file_ingestion_quota_reservations{status=\"processing\"}", "legendFormat": "processing" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "ops" }, "overrides": [] }
+    }
+  ]
+}

@@ -1,0 +1,132 @@
+syntax = "proto3";
+
+package ai_gateway.payments.v1;
+
+service PaymentService {
+    rpc CreateTopUp(CreateTopUpRequest) returns (CreateTopUpResponse);
+    rpc CapturePayPalOrder(CapturePayPalOrderRequest) returns (CapturePayPalOrderResponse);
+    rpc CreatePayPalVaultSetupToken(CreatePayPalVaultSetupTokenRequest) returns (CreatePayPalVaultSetupTokenResponse);
+    rpc CreatePayPalPaymentToken(CreatePayPalPaymentTokenRequest) returns (CreatePayPalPaymentTokenResponse);
+    rpc AttachPaymentMethod(AttachPaymentMethodRequest) returns (PaymentMethodResponse);
+    rpc RemovePaymentMethod(RemovePaymentMethodRequest) returns (RemovePaymentMethodResponse);
+    rpc SetDefaultPaymentMethod(SetDefaultPaymentMethodRequest) returns (PaymentMethodResponse);
+    rpc ListPaymentMethods(ListPaymentMethodsRequest) returns (ListPaymentMethodsResponse);
+    rpc GetPaymentMethod(GetPaymentMethodRequest) returns (GetPaymentMethodResponse);
+    rpc ChargePayPalVault(ChargePayPalVaultRequest) returns (ChargePayPalVaultResponse);
+}
+
+message PaymentMethod {
+    string id = 1;
+    string user_id = 2;
+    string provider = 3;
+    string provider_payment_method_id = 4;
+    optional string brand = 5;
+    optional string last4 = 6;
+    optional int32 exp_month = 7;
+    optional int32 exp_year = 8;
+    bool is_default = 9;
+    string created_at = 10;
+}
+
+message CreateTopUpRequest {
+    string user_id = 1;
+    string amount = 2;
+    string currency = 3;
+    string idempotency_key = 4;
+    string return_url = 5;
+    string cancel_url = 6;
+    string kind = 7;
+    string reference_id = 8;
+}
+
+message CreateTopUpResponse {
+    string provider = 1;
+    string provider_reference = 2;
+    string approval_url = 3;
+    string status = 4;
+}
+
+message CapturePayPalOrderRequest {
+    string user_id = 1;
+    string order_id = 2;
+}
+
+message CapturePayPalOrderResponse {
+    bool success = 1;
+    string provider_reference = 2;
+    string status = 3;
+}
+
+message CreatePayPalVaultSetupTokenRequest {
+    string user_id = 1;
+    string return_url = 2;
+    string cancel_url = 3;
+}
+
+message CreatePayPalVaultSetupTokenResponse {
+    string setup_token_id = 1;
+    string approval_url = 2;
+    string status = 3;
+}
+
+message CreatePayPalPaymentTokenRequest {
+    string user_id = 1;
+    string setup_token_id = 2;
+    bool set_default = 3;
+}
+
+message CreatePayPalPaymentTokenResponse {
+    PaymentMethod payment_method = 1;
+    string payment_token_id = 2;
+    optional string payer_id = 3;
+    optional string email = 4;
+}
+
+message AttachPaymentMethodRequest {
+    string user_id = 1;
+    string provider = 2;
+    string provider_payment_method_id = 3;
+    optional string brand = 4;
+    optional string last4 = 5;
+    optional int32 exp_month = 6;
+    optional int32 exp_year = 7;
+    bool set_default = 8;
+}
+
+message RemovePaymentMethodRequest {
+    string user_id = 1;
+    string payment_method_id = 2;
+}
+
+message RemovePaymentMethodResponse {
+    bool success = 1;
+}
+
+message SetDefaultPaymentMethodRequest {
+    string user_id = 1;
+    string payment_method_id = 2;
+}
+
+message ListPaymentMethodsRequest {
+    string user_id = 1;
+}
+
+message GetPaymentMethodRequest {
+    string user_id = 1;
+    string payment_method_id = 2;
+}
+
+message PaymentMethodResponse {
+    PaymentMethod payment_method = 1;
+}
+
+message ListPaymentMethodsResponse {
+    repeated PaymentMethod payment_methods = 1;
+}
+
+message GetPaymentMethodResponse {
+    optional PaymentMethod payment_method = 1;
+}
+
+message ChargePayPalVaultRequest { string user_id = 1; string amount = 2; string currency = 3; string idempotency_key = 4; string reference_id = 5; }
+message ChargePayPalVaultResponse { bool success = 1; string provider_reference = 2; string status = 3; }

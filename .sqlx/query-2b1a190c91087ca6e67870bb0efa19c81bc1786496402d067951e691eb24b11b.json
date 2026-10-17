@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO webhook_deliveries (id,webhook_endpoint_id,event_type,payload,status,attempts,last_attempt_at) VALUES ($1,$2,$3,$4,$5,$6,now())",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Varchar",
+        "Jsonb",
+        "Varchar",
+        "Int2"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "2b1a190c91087ca6e67870bb0efa19c81bc1786496402d067951e691eb24b11b"
+}

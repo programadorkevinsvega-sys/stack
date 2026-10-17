@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE payment_transactions SET provider_reference=$2,status=$3,amount=$4,currency=$5,failure_reason=$6,metadata=$7,updated_at=$8 WHERE id=$1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Varchar",
+        "Varchar",
+        "Numeric",
+        "Bpchar",
+        "Text",
+        "Jsonb",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "9fca286823781ddba0e6b9c058c610e5ea07a16f26cafc8a2e19ad1b4bdbd992"
+}

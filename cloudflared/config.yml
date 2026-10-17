@@ -1,0 +1,54 @@
+tunnel: 080d27aa-5e3b-4041-8f8d-92967ee0a6e2
+credentials-file: /home/servidor-lenovo/.cloudflared/080d27aa-5e3b-4041-8f8d-92967ee0a6e2.json
+
+ingress:
+  # --- UIs de Bases de Datos (pgAdmin) ---
+  - hostname: pgadmin.bravexcolombia.com
+    service: http://100.121.34.76:5050
+
+  # --- UIs de Caché (RedisInsight) ---
+  - hostname: redis.bravexcolombia.com
+    service: http://100.121.34.76:5540
+
+  # --- UIs de Caché (RedisCommander) ---
+  - hostname: rediscommander.bravexcolombia.com
+    service: http://100.121.34.76:8081
+
+  # --- UIs de Mensajería (RabbitMQ) ---
+  - hostname: rabbitmq.bravexcolombia.com
+    service: http://100.121.34.76:15672
+
+  # --- UI de Seguridad (Vault) ---
+  - hostname: vault.bravexcolombia.com
+    service: http://100.121.34.76:8200
+
+  # --- UI de Almacenamiento (MinIO - Consola) ---
+  - hostname: minio.bravexcolombia.com
+    service: http://100.121.34.76:9004
+
+  # --- UI de Mensajería (Kafka Admin) ---
+  - hostname: kafka.bravexcolombia.com
+    service: http://100.121.34.76:8080
+
+  # --- Monitoreo en Tiempo Real (NATS) ---
+  - hostname: nats.bravexcolombia.com
+    service: http://100.121.34.76:8223
+
+  # --- Gestión de Contenedores (Portainer) ---
+  - hostname: portainer.bravexcolombia.com
+    service: http://100.121.34.76:9001
+
+  # --- Regla por defecto (catch-all) ---
+  - service: http_status:404
+
+# Detener el servicio
+# sudo systemctl stop cloudflared
+
+# Iniciar el servicio
+# sudo systemctl start cloudflared
+
+# O reiniciar directamente
+# sudo systemctl restart cloudflared
+
+# Verificar estado
+# sudo systemctl status cloudflared

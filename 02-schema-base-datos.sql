@@ -1,0 +1,11 @@
+-- Archivo conservado como punto de entrada documental.
+--
+-- La instalación local ya no crea esquemas compartidos. Cada microservicio
+-- tiene una base de datos independiente dentro del mismo contenedor
+-- PostgreSQL, y utiliza únicamente el esquema public de esa base.
+--
+-- Bases: docker/postgres/init-databases.sh
+-- Tablas: apps/<microservicio>/migrations/
+--
+-- El arranque y todas las migraciones son automáticos:
+--   ./run-all.sh --build

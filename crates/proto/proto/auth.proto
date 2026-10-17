@@ -1,0 +1,236 @@
+syntax = "proto3";
+
+package ai_gateway.auth.v1;
+
+service AuthService {
+    rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+
+    rpc Register(RegisterRequest) returns (RegisterResponse);
+    rpc VerifyEmail(VerifyEmailRequest) returns (VerifyEmailResponse);
+    rpc RequestEmailVerification(RequestEmailVerificationRequest) returns (RequestEmailVerificationResponse);
+    rpc Login(LoginRequest) returns (LoginResponse);
+    rpc Refresh(RefreshRequest) returns (RefreshResponse);
+    rpc Logout(LogoutRequest) returns (LogoutResponse);
+    rpc LogoutAll(LogoutAllRequest) returns (LogoutAllResponse);
+    rpc ListSessions(ListSessionsRequest) returns (ListSessionsResponse);
+    rpc RevokeSession(RevokeSessionRequest) returns (RevokeSessionResponse);
+
+    rpc RequestPasswordReset(RequestPasswordResetRequest) returns (RequestPasswordResetResponse);
+    rpc ResetPassword(ResetPasswordRequest) returns (ResetPasswordResponse);
+    rpc ChangePassword(ChangePasswordRequest) returns (ChangePasswordResponse);
+    rpc EnableMfa(EnableMfaRequest) returns (EnableMfaResponse);
+    rpc ConfirmMfa(ConfirmMfaRequest) returns (ConfirmMfaResponse);
+    rpc DisableMfa(DisableMfaRequest) returns (DisableMfaResponse);
+
+    rpc GetUser(GetUserRequest) returns (GetUserResponse);
+    rpc GetUserByEmail(GetUserByEmailRequest) returns (GetUserByEmailResponse);
+    rpc ValidateAccessToken(ValidateAccessTokenRequest) returns (ValidateAccessTokenResponse);
+    rpc UpdateProfile(UpdateProfileRequest) returns (UpdateProfileResponse);
+    rpc ListUsers(ListUsersRequest) returns (ListUsersResponse);
+    rpc UnlockAccount(UnlockAccountRequest) returns (UnlockAccountResponse);
+    rpc DisableUser(DisableUserRequest) returns (DisableUserResponse);
+    rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse);
+}
+
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+    bool ok = 1;
+    string status = 2;
+}
+
+message User {
+    string id = 1;
+    string email = 2;
+    optional string display_name = 3;
+    optional string avatar_url = 4;
+    bool mfa_enabled = 5;
+    string status = 6;
+    string role = 7;
+}
+
+message RegisterRequest {
+    string email = 1;
+    string password = 2;
+    optional string display_name = 3;
+}
+
+message RegisterResponse {
+    User user = 1;
+}
+
+message VerifyEmailRequest {
+    string token = 1;
+}
+
+message VerifyEmailResponse {
+    bool success = 1;
+}
+
+message RequestEmailVerificationRequest {
+    string email = 1;
+}
+
+message RequestEmailVerificationResponse {
+    bool success = 1;
+}
+
+message LoginRequest {
+    string email = 1;
+    string password = 2;
+    optional string mfa_code = 3;
+    optional string client_ip = 4;
+    optional string user_agent = 5;
+}
+
+message LoginResponse {
+    string access_token = 1;
+    string refresh_token = 2;
+    string token_type = 3;
+}
+
+message RefreshRequest {
+    string refresh_token = 1;
+}
+
+message RefreshResponse {
+    string access_token = 1;
+    string refresh_token = 2;
+    string token_type = 3;
+}
+
+message LogoutRequest {
+    string refresh_token = 1;
+}
+
+message LogoutResponse {
+    bool success = 1;
+}
+
+message LogoutAllRequest { string user_id = 1; }
+message LogoutAllResponse { bool success = 1; }
+
+message ListSessionsRequest { string user_id = 1; }
+message ListSessionsResponse { repeated ActiveSession sessions = 1; }
+
+message RevokeSessionRequest {
+    string user_id = 1;
+    string session_id = 2;
+}
+message RevokeSessionResponse { bool success = 1; }
+
+message ActiveSession {
+    string session_id = 1;
+    string user_agent = 2;
+    string ip_address = 3;
+    string created_at = 4;
+    string last_seen_at = 5;
+}
+
+message RequestPasswordResetRequest {
+    string email = 1;
+}
+
+message RequestPasswordResetResponse {
+    bool success = 1;
+}
+
+message ResetPasswordRequest {
+    string token = 1;
+    string new_password = 2;
+}
+
+message ResetPasswordResponse {
+    bool success = 1;
+}
+
+message ChangePasswordRequest {
+    string user_id = 1;
+    string old_password = 2;
+    string new_password = 3;
+}
+
+message ChangePasswordResponse {
+    bool success = 1;
+}
+
+message EnableMfaRequest {
+    string user_id = 1;
+    optional string account_name = 2;
+}
+
+message EnableMfaResponse {
+    string otpauth_uri = 1;
+}
+
+message ConfirmMfaRequest {
+    string user_id = 1;
+    string code = 2;
+}
+
+message ConfirmMfaResponse {
+    bool success = 1;
+}
+
+message DisableMfaRequest {
+    string user_id = 1;
+    string code = 2;
+}
+
+message DisableMfaResponse {
+    bool success = 1;
+}
+
+message GetUserRequest {
+    string user_id = 1;
+}
+
+message GetUserResponse {
+    User user = 1;
+}
+
+message GetUserByEmailRequest {
+    string email = 1;
+}
+
+message GetUserByEmailResponse {
+    User user = 1;
+}
+
+message ValidateAccessTokenRequest { string access_token = 1; }
+message ValidateAccessTokenResponse { User user = 1; }
+
+message UpdateProfileRequest {
+    string user_id = 1;
+    optional string display_name = 2;
+    optional string avatar_url = 3;
+}
+message UpdateProfileResponse { User user = 1; }
+
+message ListUsersRequest {
+    uint32 limit = 1;
+    // Deprecated: use after_cursor instead
+    uint32 offset = 2;
+    // Keyset pagination: opaque cursor from previous ListUsersResponse.next_cursor.
+    // First page: omit this field.
+    optional string after_cursor = 3;
+}
+message ListUsersResponse {
+    repeated User users = 1;
+    // Opaque cursor for the next page. Empty if there are no more results.
+    string next_cursor = 2;
+}
+
+message UnlockAccountRequest {
+    string user_id = 1;
+    string admin_actor_id = 2;
+}
+message UnlockAccountResponse { bool success = 1; }
+
+message DisableUserRequest {
+    string user_id = 1;
+    string admin_actor_id = 2;
+}
+message DisableUserResponse { bool success = 1; }
+message DeleteUserRequest { string user_id = 1; string admin_actor_id = 2; }
+message DeleteUserResponse { bool success = 1; }

@@ -1,0 +1,10 @@
+# Environment variables
+.env*.local
+
+# Build artifacts
+node_modules
+.next/
+*.tsbuildinfo
+
+# OS files
+.DS_Store

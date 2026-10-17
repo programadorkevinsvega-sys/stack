@@ -1,0 +1,88 @@
+# ========================================
+# 🌐 Nginx Reverse Proxy para n8n
+# ========================================
+# Actúa como única entrada pública a internet
+# Redirige tráfico a n8n-web en la red stack-network
+
+services:
+  nginx:
+    image: nginx:alpine
+    container_name: nginx-proxy
+    restart: always
+
+    environment:
+      # IMPORTANTE para Cloudflare, confía en los headers de proxy para IP real y protocolo
+      TZ: ${TZ:-America/Bogota}
+      GENERIC_TIMEZONE: ${GENERIC_TIMEZONE:-America/Bogota}
+
+    # Puertos PÚBLICOS (expuestos a internet)
+    ports:
+      # Acceso HTTP (público y Tailscale)
+      - "127.0.0.1:8085:80"
+      - "100.121.34.76:8085:80"
+
+      # Acceso HTTPS (público y Tailscale)
+      - "127.0.0.1:9443:443"
+      - "100.121.34.76:9443:443"
+
+    # Volúmenes
+    volumes:
+      # 1. Configuración principal de Nginx
+      - ./volumes/conf/nginx.conf:/etc/nginx/nginx.conf:ro
+
+      # 2. Configuraciones adicionales (donde suele ir el proxy de n8n)
+      - ./volumes/conf/conf.d:/etc/nginx/conf.d:ro
+
+      # 3. Certificados SSL
+      - ./volumes/ssl:/etc/nginx/ssl:ro
+
+      # 4. Logs
+      - ./logs:/var/log/nginx
+
+      # 5. Sincronización de hora local (opcional pero recomendado)
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+    # Redes
+    networks:
+      # Conectado SOLO a proxy-network (pública)
+      # No puede acceder directamente a stack-network
+      - proxy-network
+      - stack-network
+      # Depends On
+      # depends_on:
+      # n8n-web:
+      #condition: service_healthy
+
+      # Health Check
+    healthcheck:
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health" ]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+    # Logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# ========================================
+# Redes
+# ========================================
+networks:
+  # Red pública - expuesta a internet
+  proxy-network:
+    name: proxy-network
+    driver: bridge
+    external: true # LA RED YA DEBE EXISTIR (crear con: docker network create proxy-network)
+  stack-network:
+    # <--- AÑADE ESTO también al final
+    external: true # LA RED YA DEBE EXISTIR (crear con: docker network create stack-network)
+# ========================================
+# Volúmenes
+# ========================================
+volumes:
+  logs:
+    name: nginx-logs

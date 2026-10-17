@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE model_catalog\n            SET supports_streaming = $2,\n                supports_tools = $3,\n                supports_vision = $4,\n                is_active = $5,\n                deprecated_at = $6\n            WHERE id = $1\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Bool",
+        "Bool",
+        "Bool",
+        "Bool",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "0776c497622ab3d04914c7eb5cee46bbc69567dbef1e07991e92c9dcfaadd6c7"
+}

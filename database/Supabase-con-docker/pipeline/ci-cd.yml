@@ -1,0 +1,217 @@
+# Pipeline de CI/CD para Supabase Docker
+# Autor: Supabase Docker Project
+# Fecha: $(date)
+
+name: Supabase Docker CI/CD
+
+on:
+  push:
+    branches: [ main, develop, feature/* ]
+    paths:
+      - 'supabase-docker/**'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'supabase-docker/**'
+  schedule:
+    - cron: '0 2 * * *'  # Daily at 2 AM
+
+env:
+  DOCKER_COMPOSE_FILE: supabase-docker/docker-compose.yml
+  ENV_FILE: supabase-docker/.env
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: |
+        cd supabase-docker
+        npm install
+
+    - name: Run ESLint
+      run: |
+        cd supabase-docker
+        npm run lint
+
+    - name: Run Prettier
+      run: |
+        cd supabase-docker
+        npm run format:check
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build test environment
+      run: |
+        cd supabase-docker
+        docker-compose -f docker-compose.test.yml build
+
+    - name: Start test services
+      run: |
+        cd supabase-docker
+        docker-compose -f docker-compose.test.yml up -d
+        sleep 60
+
+    - name: Run tests
+      run: |
+        cd supabase-docker
+        docker-compose -f docker-compose.test.yml exec -T supabase-db psql -U postgres -c "SELECT 1;"
+        docker-compose -f docker-compose.test.yml exec -T supabase-storage curl -f http://localhost:5000/health
+        docker-compose -f docker-compose.test.yml exec -T supabase-auth curl -f http://localhost:9999/health
+
+    - name: Run integration tests
+      run: |
+        cd supabase-docker
+        npm run test:integration
+
+    - name: Cleanup test environment
+      if: always()
+      run: |
+        cd supabase-docker
+        docker-compose -f docker-compose.test.yml down -v
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: './supabase-docker'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+
+    - name: Upload Trivy scan results
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+    - name: Run Snyk security scan
+      uses: snyk/actions/docker@master
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      with:
+        image: supabase-docker:latest
+        args: --severity-threshold=high
+
+  build:
+    runs-on: ubuntu-latest
+    needs: [lint, test, security]
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build Docker images
+      run: |
+        cd supabase-docker
+        docker-compose build
+
+    - name: Test Docker images
+      run: |
+        cd supabase-docker
+        docker-compose up -d
+        sleep 30
+        
+        # Health checks
+        curl -f http://localhost:3000 || exit 1
+        curl -f http://localhost:8000/health || exit 1
+        docker exec supabase-db pg_isready -U postgres || exit 1
+
+    - name: Cleanup
+      if: always()
+      run: |
+        cd supabase-docker
+        docker-compose down -v
+
+  deploy-staging:
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/develop'
+    environment: staging
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Deploy to staging
+      run: |
+        echo "Deploying to staging environment..."
+        # Add staging deployment commands here
+        # Example: kubectl apply -f k8s/staging/
+        # Example: docker-compose -f docker-compose.staging.yml up -d
+
+    - name: Run smoke tests
+      run: |
+        echo "Running smoke tests on staging..."
+        # Add smoke test commands here
+        # Example: curl -f https://staging.supabase.com/health
+
+  deploy-production:
+    runs-on: ubuntu-latest
+    needs: [build, deploy-staging]
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Deploy to production
+      run: |
+        echo "Deploying to production environment..."
+        # Add production deployment commands here
+        # Example: kubectl apply -f k8s/production/
+        # Example: docker-compose -f docker-compose.prod.yml up -d
+
+    - name: Run production tests
+      run: |
+        echo "Running production tests..."
+        # Add production test commands here
+        # Example: curl -f https://supabase.com/health
+
+    - name: Notify deployment
+      run: |
+        echo "Production deployment completed successfully!"
+        # Add notification commands here
+        # Example: curl -X POST -H 'Content-type: application/json' --data '{"text":"Supabase Docker deployed to production!"}' $SLACK_WEBHOOK_URL
+
+  backup:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Backup production data
+      run: |
+        echo "Running scheduled backup..."
+        # Add backup commands here
+        # Example: docker-compose exec supabase-db pg_dump -U postgres postgres > backup.sql
+        # Example: aws s3 cp backup.sql s3://backup-bucket/
+
+    - name: Cleanup old backups
+      run: |
+        echo "Cleaning up old backups..."
+        # Add cleanup commands here
+        # Example: aws s3 ls s3://backup-bucket/ | awk '$1 < "'$(date -d '30 days ago' '+%Y-%m-%d')'" {print $4}' | xargs -I {} aws s3 rm s3://backup-bucket/{}

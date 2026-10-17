@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE api_keys SET status='revoked', revoked_at=now(), revoked_reason=$2 WHERE id=$1 AND status='active'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Varchar"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "ae591817334db9dbc7186596c4acbf596a808bacc8e3e18a3a39e5848e7e542f"
+}

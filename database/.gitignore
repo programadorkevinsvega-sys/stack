@@ -1,0 +1,21 @@
+# Ignorar ciertos directorios/archivos en git
+node_modules/
+.env.local
+.env.*.local
+
+# Archivos de backup y archivos viejos
+.archive/
+*.tar.gz
+*.backup
+
+# Docker
+.docker
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db

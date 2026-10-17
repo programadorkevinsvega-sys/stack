@@ -1,0 +1,133 @@
+# 🗄️ SERVICIOS EXTERNOS PARA n8n
+# ================================
+# Este docker-compose.redis.yml levanta el servicio EXTERNO que n8n necesita:
+# - Redis: Message broker (cola de trabajos para workers distribuidos)
+#
+# Estos servicios son COMPARTIDOS por:
+# - PC Local (docker-compose.yml)
+# - VPS Remoto (vps/docker-compose.vps.yml)
+#
+# ⚠️ IMPORTANTE: Levanta ESTO PRIMERO, antes de levantarn8n en PC o VPS
+
+services:
+
+  # ================================
+  # � Redis - Message Broker
+  # ================================
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: always # Reinicia automáticamente, incluso después de reboot
+
+    environment:
+      # IMPORTANTE para Cloudflare, confía en los headers de proxy para IP real y protocolo
+      TZ: ${TZ:-America/Bogota}
+      GENERIC_TIMEZONE: ${GENERIC_TIMEZONE:-America/Bogota}
+    # Comando con configuración dinámmica de SSL
+    command:
+      - /bin/sh
+      - -c
+      - |
+        ARGS="redis-server --appendonly yes --appendfsync everysec --maxmemory 9gb --maxmemory-policy allkeys-lfu --tcp-backlog 640 --requirepass ${REDIS_PASSWORD:-Kevins1612522026}"
+        
+        if [ "${REDIS_ENABLE_SSL:-false}" = "true" ]; then
+          echo "Redis: SSL/TLS ENABLED on port 6379"
+          ARGS="$$ARGS --port 0 --tls-port 6379 --tls-cert-file /ssl/generales/server.crt --tls-key-file /ssl/generales/server.key --tls-ca-cert-file /ssl/generales/root.crt --tls-auth-clients no --tls-protocols tlsv1.3"
+        else
+          echo "Redis: SSL/TLS DISABLED, using plain port 6379"
+          ARGS="$$ARGS --port 6379 --tls-port 0"
+        fi
+        
+        exec $$ARGS
+
+    # Datos persistentes (en carpeta ./volumes/)
+    volumes:
+      - redis_data:/data
+      - ./ssl:/ssl:ro
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+
+    # Puertos
+    ports:
+      - "100.121.34.76:6379:6379"
+      - "127.0.0.1:6379:6379"
+
+    # Healthcheck - adapts to SSL enabled or disabled
+    healthcheck:
+      test: [ "CMD-SHELL", "if [ \"${REDIS_ENABLE_SSL:-false}\" = \"true\" ]; then redis-cli --tls --cacert /ssl/generales/root.crt -a \"${REDIS_PASSWORD:-Kevins1612522026}\" ping | grep -q PONG; else redis-cli -a \"${REDIS_PASSWORD:-Kevins1612522026}\" ping | grep -q PONG; fi" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+    # Red
+    networks:
+      - stack-network
+
+    # Logs
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    # Limites de recursos (12GB VPS independiente)
+    deploy:
+      resources:
+        limits:
+          memory: 10G
+        reservations:
+          memory: 2G
+
+#  redis-commander:
+#    image: rediscommander/redis-commander:latest
+#    restart: unless-stopped # Reinicia automáticamente, incluso después de reboot
+#    environment:
+#      REDIS_HOST: ${REDIS_HOST:-redis}
+#      REDIS_PORT: ${REDIS_PORT:-6379}
+#      REDIS_PASSWORD: ${REDIS_PASSWORD:-Kevins1612522026}
+#      REDIS_TLS: ${REDIS_ENABLE_SSL:-false}
+#      HTTP_USER: ${REDIS_COMMANDER_USER:-KevinsAdmin}
+#      HTTP_PASSWORD: ${REDIS_COMMANDER_PASSWORD:-Kevins1612522026}
+#      # IMPORTANTE para Cloudflare, confía en los headers de proxy para IP real y protocolo
+#      TZ: ${TZ:-America/Bogota}
+#      GENERIC_TIMEZONE: ${GENERIC_TIMEZONE:-America/Bogota}
+#    ports:
+#      - "100.121.34.76:8081:8081"
+#      - "127.0.0.1:8081:8081"
+#    depends_on:
+#      - redis
+#    networks:
+#      - stack-network
+#    volumes:
+#      - ./ssl/root.crt:/ssl/redis/root.crt:ro
+#      - /etc/localtime:/etc/localtime:ro
+#      - /etc/timezone:/etc/timezone:ro
+  redisinsight:
+    image: redis/redisinsight:latest
+    restart: always # Reinicia automáticamente, incluso después de reboot
+    environment:
+      REDIS_INSIGHT_USERNAME: ${REDIS_INSIGHT_USERNAME:-KevinsAdmin}
+      REDIS_INSIGHT_PASSWORD: ${REDIS_INSIGHT_PASSWORD:-Kevins1612522026}
+      # IMPORTANTE para Cloudflare, confía en los headers de proxy para IP real y protocolo
+      GENERIC_TIMEZONE: ${GENERIC_TIMEZONE:-America/Bogota}
+    ports:
+      - "100.121.34.76:5540:5540"
+      - "127.0.0.1:5540:5540"
+    depends_on:
+      - redis
+    networks:
+      - stack-network
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+# ================================
+# 🌐 RED COMPARTIDA
+# ================================
+networks:
+  stack-network:
+    name: stack-network
+    driver: bridge
+
+volumes:
+  redis_data:

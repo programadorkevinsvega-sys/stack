@@ -1,0 +1,427 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ai-gateway-postgres
+    environment:
+      POSTGRES_USER: "ai_gateway"
+      POSTGRES_PASSWORD: "0e8549581ef2a8b562447d29a2cbf92b1f2e68bd71916e24"
+      POSTGRES_DB: postgres
+      POSTGRES_DATABASES: "gateway_db,router_db,credentials_db,auth_db,keys_db,catalog_db,subscription_db,payments_db,billing_db,usage_db,invoicing_db,customer_bff_db,files_db"
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/postgres/init-databases.sh:/docker-entrypoint-initdb.d/01-databases.sh:ro
+      - ./docker/postgres/init-databases.sh:/opt/nexus/init-databases.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ai_gateway -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ai-gateway-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: ai-gateway-redis
+    command:
+      - "redis-server"
+      - "--appendonly"
+      - "yes"
+      - "--requirepass"
+      - "0dea6db825d934ca7eab5de31d9c2fe755bb0d641ed82fe0"
+    environment:
+      REDIS_PASSWORD: "0dea6db825d934ca7eab5de31d9c2fe755bb0d641ed82fe0"
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"0dea6db825d934ca7eab5de31d9c2fe755bb0d641ed82fe0\" ping 2>/dev/null | grep -q PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - ai-gateway-net
+
+  nats:
+    image: nats:2.10-alpine
+    container_name: ai-gateway-nats
+    command:
+      - "--name"
+      - "ai-gateway-nats"
+      - "--js"
+      - "--store_dir"
+      - "/data"
+      - "--user"
+      - "nats_admin"
+      - "--pass"
+      - "db8efb91ebcd9086083537cc44cd4cefa986bbe4339fb549"
+      - "--http_port"
+      - "8222"
+    ports:
+      - "4222:4222"   # client
+      - "8222:8222"   # monitoring
+    volumes:
+      - natsdata:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8222/healthz >/dev/null 2>&1 || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - ai-gateway-net
+
+  nats-exporter:
+    image: natsio/prometheus-nats-exporter:0.15.0
+    container_name: ai-gateway-nats-exporter
+    command:
+      - "-varz"
+      - "-connz"
+      - "-routez"
+      - "-subz"
+      - "-jsz=all"
+      - "http://nats:8222"
+    depends_on:
+      nats:
+        condition: service_healthy
+    networks:
+      - ai-gateway-net
+
+  qdrant:
+    image: qdrant/qdrant:v1.15.5
+    container_name: ai-gateway-qdrant
+    environment:
+      QDRANT__SERVICE__API_KEY: "8682869fdfa2a4192826417f3becb5b78750e24d35e945d7f51eff07229778ae"
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrantdata:/qdrant/storage
+    restart: unless-stopped
+    networks:
+      - ai-gateway-net
+
+  pgadmin:
+    image: dpage/pgadmin4:9.16
+    container_name: ai-gateway-pgadmin
+    entrypoint:
+      - /bin/sh
+      - -ec
+      - |
+        umask 077
+        printf '%s\n' 'postgres:5432:*:ai_gateway:0e8549581ef2a8b562447d29a2cbf92b1f2e68bd71916e24' > /tmp/nexus.pgpass
+        cp /tmp/nexus.pgpass /var/lib/pgadmin/.pgpass
+        chmod 600 /var/lib/pgadmin/.pgpass
+        cat > /tmp/nexus-servers.json <<'EOF'
+        {
+          "Servers": {
+            "1": {
+              "Name": "Nexus Local PostgreSQL",
+              "Group": "Local",
+              "Host": "postgres",
+              "Port": 5432,
+              "MaintenanceDB": "postgres",
+              "Username": "ai_gateway",
+              "SSLMode": "prefer",
+              "ConnectionParameters": {
+                "sslmode": "prefer",
+                "passfile": "/var/lib/pgadmin/.pgpass"
+              }
+            }
+          }
+        }
+        EOF
+        exec /entrypoint.sh
+    environment:
+      PGADMIN_DEFAULT_EMAIL: "admin@nexusgateway.com"
+      PGADMIN_DEFAULT_PASSWORD: "fe1af5edde2935a07429e3db50cc2d23dbd7cab708a2ce02"
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+      PGPASS_FILE: "/tmp/nexus.pgpass"
+      PGADMIN_SERVER_JSON_FILE: "/tmp/nexus-servers.json"
+      PGADMIN_REPLACE_SERVERS_ON_STARTUP: "True"
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmindata:/var/lib/pgadmin
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/misc/ping | grep -q PING"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 180s
+    restart: unless-stopped
+    networks:
+      - ai-gateway-net
+
+  redisinsight:
+    image: redis/redisinsight:2.70
+    container_name: ai-gateway-redisinsight
+    environment:
+      RI_REDIS_HOST: redis
+      RI_REDIS_PORT: "6379"
+      RI_REDIS_ALIAS: nexus-local
+      RI_REDIS_PASSWORD: "0dea6db825d934ca7eab5de31d9c2fe755bb0d641ed82fe0"
+    ports:
+      - "5540:5540"
+    volumes:
+      - redisinsightdata:/data
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - ai-gateway-net
+
+  tempo:
+    image: grafana/tempo:3.0.2
+    container_name: ai-gateway-tempo
+    command:
+      - "-target=all"
+      - "-config.file=/etc/tempo/tempo.yml"
+    ports:
+      - "3200:3200"
+    volumes:
+      - ./docker/observability/tempo.yml:/etc/tempo/tempo.yml:ro
+      - tempodata:/var/tempo
+    healthcheck:
+      test: ["CMD", "/tempo", "--health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - ai-gateway-net
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.156.0
+    container_name: ai-gateway-otel-collector
+    command:
+      - "--config=/etc/otelcol-contrib/config.yml"
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+    volumes:
+      - ./docker/observability/otel-collector.yml:/etc/otelcol-contrib/config.yml:ro
+    depends_on:
+      tempo:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "/otelcol-contrib",
+          "validate",
+          "--config=/etc/otelcol-contrib/config.yml",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+    networks:
+      - ai-gateway-net
+
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    container_name: ai-gateway-prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.enable-lifecycle"
+    ports:
+      - "9090:9090"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./docker/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./docker/observability/prometheus-rules.yml:/etc/prometheus/rules/s3-gateway.yml:ro
+      - prometheusdata:/prometheus
+    depends_on:
+      otel-collector:
+        condition: service_healthy
+      nats-exporter:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:9090/-/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+    networks:
+      - ai-gateway-net
+
+  loki:
+    image: grafana/loki:3.7.0
+    container_name: ai-gateway-loki
+    command:
+      - "-config.file=/etc/loki/loki.yml"
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./docker/observability/loki.yml:/etc/loki/loki.yml:ro
+      - lokidata:/loki
+    restart: unless-stopped
+    networks:
+      - ai-gateway-net
+
+  grafana-alloy:
+    image: grafana/alloy:v1.17.1
+    container_name: ai-gateway-grafana-alloy
+    command:
+      - "run"
+      - "/etc/alloy/config.alloy"
+      - "--storage.path=/var/lib/alloy/data"
+      - "--server.http.listen-addr=0.0.0.0:12345"
+      - "--disable-reporting"
+    volumes:
+      - ./docker/observability/alloy.alloy:/etc/alloy/config.alloy:ro
+      - ./target/logs:/var/log/nexus:ro
+      - alloydata:/var/lib/alloy/data
+    depends_on:
+      loki:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - ai-gateway-net
+
+  grafana:
+    image: grafana/grafana:13.1.0
+    container_name: ai-gateway-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: "nexus_admin"
+      GF_SECURITY_ADMIN_PASSWORD: "cff15c836709427cada9c84dc298d493d61cb578a6b32045"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_FEATURE_TOGGLES_ENABLE: "traceqlEditor"
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafanadata:/var/lib/grafana
+      - ./docker/observability/grafana-datasources.yml:/etc/grafana/provisioning/datasources/observability.yml:ro
+      - ./docker/observability/grafana-dashboards.yml:/etc/grafana/provisioning/dashboards/observability.yml:ro
+      - ./docker/observability/s3-gateway-dashboard.json:/var/lib/grafana/dashboards/s3-gateway.json:ro
+      - ./docker/observability/file-service-ingestion-dashboard.json:/var/lib/grafana/dashboards/file-service-ingestion.json:ro
+    depends_on:
+      tempo:
+        condition: service_healthy
+      otel-collector:
+        condition: service_healthy
+      prometheus:
+        condition: service_healthy
+      loki:
+        condition: service_started
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://127.0.0.1:3000/api/health | grep -Eq '\"database\"[[:space:]]*:[[:space:]]*\"ok\"'",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - ai-gateway-net
+
+  vault:
+    image: hashicorp/vault:1.21.4
+    container_name: ai-gateway-vault
+    # Legacy-only profile. Backend services use AWS Secrets Manager/SSM and
+    # never start or fall back to this container.
+    profiles: ["legacy-vault"]
+    # The official entrypoint already loads every file in /vault/config.
+    # Passing the same file again registers the listener twice.
+    command: server
+    environment:
+      VAULT_ADDR: http://127.0.0.1:8200
+    ports:
+      - "8200:8200"
+    volumes:
+      - vaultdata:/vault/file
+      - ./vault/config/vault.hcl:/vault/config/vault.hcl:ro
+    healthcheck:
+      test: ["CMD", "vault", "status"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 5s
+    restart: unless-stopped
+    networks:
+      - ai-gateway-net
+
+  vault-bootstrap:
+    image: hashicorp/vault:1.21.4
+    container_name: ai-gateway-vault-bootstrap
+    profiles: ["legacy-vault"]
+    user: "0:0"
+    entrypoint:
+      - /bin/sh
+      - -ec
+      - |
+        umask 077
+        touch /vault/runtime/seed.env
+        # Legacy profile intentionally contains no credentials. Runtime
+        # secrets are managed by AWS Secrets Manager.
+        exec /bin/sh /vault/bootstrap/bootstrap.sh
+    environment:
+      VAULT_ADDR: http://vault:8200
+      VAULT_PUBLIC_ADDR: http://localhost:8200
+      VAULT_PKI_MOUNT: pki-internal
+      VAULT_PKI_ROLE: nexus-service-mtls
+      VAULT_APPROLE_NAME: nexus-services
+      VAULT_POLICY_NAME: nexus-service
+      VAULT_RUNTIME_UID: "1000"
+      VAULT_RUNTIME_GID: "1000"
+      VAULT_KV_MOUNT: secret
+      VAULT_RUNTIME_SECRET_PATH: dev/nexus/runtime
+      LOCAL_DATABASES_ENABLED: "true"
+      POSTGRES_HOST: "127.0.0.1"
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: "ai_gateway"
+      NATS_USERNAME: "nats_admin"
+    volumes:
+      - ./.runtime/vault:/vault/runtime
+      - ./vault/bootstrap.sh:/vault/bootstrap/bootstrap.sh:ro
+      - ./vault/runtime-secret-keys.txt:/vault/bootstrap/runtime-secret-keys.txt:ro
+      - ./vault/policies/nexus-service.hcl:/vault/policies/nexus-service.hcl:ro
+    depends_on:
+      vault:
+        condition: service_started
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "test -s /vault/runtime/ready && vault status >/dev/null 2>&1",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 5s
+    restart: unless-stopped
+    networks:
+      - ai-gateway-net
+
+volumes:
+  pgdata:
+  redisdata:
+  natsdata:
+  vaultdata:
+  qdrantdata:
+  pgadmindata:
+  redisinsightdata:
+  tempodata:
+  grafanadata:
+  lokidata:
+  alloydata:
+  prometheusdata:
+
+networks:
+  ai-gateway-net:
+    driver: bridge

@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE reservations SET status='confirmed', request_id=$2, model_catalog_id=$3, actual_amount=$4, aws_cost=$5, confirmed_at=now() WHERE id=$1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Numeric",
+        "Numeric"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "2320d58a0b1f973714fae1c101dd28e2bb5c1b0f6bbcb36569769b1f763e72f7"
+}

@@ -1,0 +1,12 @@
+FROM hashicorp/vault:1.15.0
+
+RUN mkdir -p /vault/data && \
+    chown vault:vault /vault/data && \
+    chmod 700 /vault/data && \
+    mkdir -p /vault/config
+
+COPY script/entrypoint.sh /entrypoint.sh
+COPY vault-init.sh /vault-init.sh
+RUN chmod +x /entrypoint.sh /vault-init.sh
+
+ENTRYPOINT ["/entrypoint.sh"]

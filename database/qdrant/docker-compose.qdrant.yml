@@ -1,0 +1,38 @@
+services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: ovh_ai_qdrant
+
+    ports:
+      - "100.121.34.76:6333:6333"
+      - "100.121.34.76:6334:6334"
+      - "127.0.0.1:6333:6333"
+      - "127.0.0.1:6334:6334"
+
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+    networks:
+      - stack-network
+
+    restart: always
+
+    environment:
+      QDRANT__SERVICE__API_KEY: "8682869fdfa2a4192826417f3becb5b78750e24d35e945d7f51eff07229778ae"
+
+    healthcheck:
+      test: [
+        "CMD-SHELL",
+        "cat /proc/net/tcp | grep -q ':18BD' || exit 1"
+      ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+networks:
+  stack-network:
+    external: true
+
+volumes:
+  qdrant_data:

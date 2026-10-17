@@ -1,0 +1,75 @@
+# 🐳 Portainer - Gestión Visual de Docker
+# ========================================
+# Interfaz web para gestionar contenedores, volúmenes, redes, etc.
+#
+# Acceso:
+# - HTTP:  http://localhost:19000
+# - HTTPS: https://localhost:19443
+#
+# Levantar: docker compose up -d
+# Detener:  docker compose down
+
+services:
+
+  # ================================
+  # 🐳 Portainer - Gestor de Docker
+  # ================================
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    restart: always
+    
+    # Puertos
+    ports:
+      - "127.0.0.1:19000:9000"      # HTTP (interfaz web)
+      - "100.121.34.76:19000:9000"      # HTTP (interfaz web)
+      - "127.0.0.1:19443:9443"      # HTTPS (seguro)
+      - "100.121.34.76:19443:9443"      # HTTPS (seguro)
+      - "127.0.0.1:8000:8000"       # Edge Agent (opcional)
+      - "100.121.34.76:8000:8000"       # Edge Agent (opcional)
+    
+    # Volúmenes
+    volumes:
+      # Socket de Docker (crítico para que Portainer vea los contenedores)
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Datos persistentes de Portainer
+      - portainer_data:/data
+    
+    # Variables de entorno
+    environment:
+      TZ: ${TZ:-America/Bogota}
+      GENERIC_TIMEZONE: ${GENERIC_TIMEZONE:-America/Bogota}
+      AGENT_SECRET: ${AGENT_SECRET}
+    
+    # Healthcheck
+    healthcheck:
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9000" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    # Red
+    networks:
+      - portainer-net
+    
+    # Logs
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# ================================
+# 📦 VOLÚMENES
+# ================================
+volumes:
+  portainer_data:
+    driver: local
+
+# ================================
+# 🌐 REDES
+# ================================
+networks:
+  portainer-net:
+    driver: bridge

@@ -1,0 +1,19 @@
+{
+  "annotations": {"list": []},
+  "editable": false,
+  "graphTooltip": 1,
+  "panels": [
+    {"type":"stat","title":"Request rate","gridPos":{"h":4,"w":6,"x":0,"y":0},"datasource":{"type":"prometheus","uid":"prometheus"},"targets":[{"expr":"sum(rate(s3_gateway_requests_total[5m]))","refId":"A"}]},
+    {"type":"stat","title":"Error rate","gridPos":{"h":4,"w":6,"x":6,"y":0},"datasource":{"type":"prometheus","uid":"prometheus"},"targets":[{"expr":"sum(rate(s3_gateway_errors_total[5m])) / clamp_min(sum(rate(s3_gateway_requests_total[5m])), 1)","refId":"A","format":"time_series"}],"fieldConfig":{"defaults":{"unit":"percentunit"}}},
+    {"type":"stat","title":"p95 latency","gridPos":{"h":4,"w":6,"x":12,"y":0},"datasource":{"type":"prometheus","uid":"prometheus"},"targets":[{"expr":"histogram_quantile(0.95, sum by (le) (rate(s3_gateway_request_duration_seconds_bucket[5m])))","refId":"A"}],"fieldConfig":{"defaults":{"unit":"s"}}},
+    {"type":"timeseries","title":"Requests by operation","gridPos":{"h":8,"w":12,"x":0,"y":4},"datasource":{"type":"prometheus","uid":"prometheus"},"targets":[{"expr":"sum by (operation,status) (rate(s3_gateway_requests_total[5m]))","legendFormat":"{{operation}} {{status}}","refId":"A"}]},
+    {"type":"timeseries","title":"Latency percentiles","gridPos":{"h":8,"w":12,"x":12,"y":4},"datasource":{"type":"prometheus","uid":"prometheus"},"targets":[{"expr":"histogram_quantile(0.50, sum by (le) (rate(s3_gateway_request_duration_seconds_bucket[5m])))","legendFormat":"p50","refId":"A"},{"expr":"histogram_quantile(0.95, sum by (le) (rate(s3_gateway_request_duration_seconds_bucket[5m])))","legendFormat":"p95","refId":"B"},{"expr":"histogram_quantile(0.99, sum by (le) (rate(s3_gateway_request_duration_seconds_bucket[5m])))","legendFormat":"p99","refId":"C"}]},
+    {"type":"logs","title":"S3 gateway logs","gridPos":{"h":9,"w":24,"x":0,"y":12},"datasource":{"type":"loki","uid":"loki"},"targets":[{"expr":"{service=\"s3-gateway\",job=\"nexus-backend\"}","refId":"A"}]}
+  ],
+  "schemaVersion": 39,
+  "title": "Nexus — S3 Gateway",
+  "uid": "nexus-s3-gateway",
+  "version": 1,
+  "time": {"from":"now-6h","to":"now"},
+  "refresh": "15s"
+}

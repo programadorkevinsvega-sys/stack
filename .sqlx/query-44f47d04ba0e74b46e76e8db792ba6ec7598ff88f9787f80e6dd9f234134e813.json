@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO model_pricing\n                (id, model_catalog_id, aws_cost_per_1k_input, aws_cost_per_1k_output,\n                 price_per_1k_input, price_per_1k_output, effective_from, effective_to, created_by_admin_id)\n            VALUES\n                ($1, $2, $3, $4, $5, $6, $7, $8, $9)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Numeric",
+        "Numeric",
+        "Numeric",
+        "Numeric",
+        "Timestamptz",
+        "Timestamptz",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "44f47d04ba0e74b46e76e8db792ba6ec7598ff88f9787f80e6dd9f234134e813"
+}

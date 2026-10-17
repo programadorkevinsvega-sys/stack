@@ -1,0 +1,8 @@
+-- No-op intencional.
+--
+-- El entorno local usa una base de datos por microservicio dentro del mismo
+-- PostgreSQL y el propietario POSTGRES_USER administrado por Vault. No se
+-- crean roles ligados a esquemas ni search_path personalizados.
+--
+-- La creación idempotente de las bases vive en:
+--   docker/postgres/init-databases.sh

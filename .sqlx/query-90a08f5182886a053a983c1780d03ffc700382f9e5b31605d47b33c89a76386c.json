@@ -1,0 +1,36 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE users\n             SET failed_login_count = failed_login_count + 1,\n                 locked_until = CASE\n                     WHEN failed_login_count + 1 >= $2 THEN now() + ($3::int4 || ' minutes')::interval\n                     ELSE locked_until\n                 END,\n                 status = CASE\n                     WHEN failed_login_count + 1 >= $2 THEN 'locked'\n                     ELSE status\n                 END\n             WHERE id = $1\n             RETURNING failed_login_count::int4 AS \"new_failed_count!\", locked_until, status",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "new_failed_count!",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "locked_until",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 2,
+        "name": "status",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int4",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      null,
+      true,
+      false
+    ]
+  },
+  "hash": "90a08f5182886a053a983c1780d03ffc700382f9e5b31605d47b33c89a76386c"
+}

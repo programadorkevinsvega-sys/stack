@@ -1,0 +1,109 @@
+# 🗄️ SERVICIOS EXTERNOS PARA n8n
+# ================================
+# Este docker-compose.nats.yml levanta el servicio EXTERNO que n8n necesita:
+# - NATS JetStream: broker ligero y durable para colas/eventos distribuidos
+#
+# Este servicio es COMPARTIDO por:
+# - automatizacion/
+# - microservicios/ (por ejemplo email-service-managed)
+#
+# ⚠️ IMPORTANTE:
+# - Este stack NO levanta aplicaciones; solo la infraestructura compartida.
+# - Levanta esto una sola vez de forma manual desde stack/database.
+
+services:
+
+  # ================================
+  # 📡 NATS JetStream - Broker distribuido
+  # ================================
+  nats:
+    image: nats:2.10-alpine
+    container_name: ${NATS_CONTAINER_NAME:-nats-jetstream-node1}
+    restart: always
+
+    environment:
+      TZ: ${TZ:-America/Bogota}
+      GENERIC_TIMEZONE: ${GENERIC_TIMEZONE:-America/Bogota}
+      NATS_SERVER_NAME: ${NATS_SERVER_NAME:-nats-jetstream-primary}
+      NATS_PORT: ${NATS_PORT:-4223}
+      NATS_HTTP_PORT: ${NATS_HTTP_PORT:-8223}
+      NATS_CLUSTER_ENABLED: ${NATS_CLUSTER_ENABLED:-false}
+      NATS_CLUSTER_NAME: ${NATS_CLUSTER_NAME:-nats-jetstream-cluster}
+      NATS_CLUSTER_PORT: ${NATS_CLUSTER_PORT:-6223}
+      NATS_CLUSTER_LISTEN_HOST: ${NATS_CLUSTER_LISTEN_HOST:-0.0.0.0}
+      NATS_CLUSTER_ADVERTISE_HOST: ${NATS_CLUSTER_ADVERTISE_HOST:-}
+      NATS_CLUSTER_ADVERTISE_PORT: ${NATS_CLUSTER_ADVERTISE_PORT:-6223}
+      NATS_CLUSTER_USERNAME: ${NATS_CLUSTER_USERNAME:-}
+      NATS_CLUSTER_PASSWORD: ${NATS_CLUSTER_PASSWORD:-}
+      NATS_CLUSTER_ROUTES: ${NATS_CLUSTER_ROUTES:-}
+      NATS_USERNAME: ${NATS_USERNAME:?NATS_USERNAME is required}
+      NATS_PASSWORD: ${NATS_PASSWORD:?NATS_PASSWORD is required}
+      NATS_CORE_PLATFORM_USERNAME: ${NATS_CORE_PLATFORM_USERNAME:-core_platform}
+      NATS_CORE_PLATFORM_PASSWORD: ${NATS_CORE_PLATFORM_PASSWORD:-}
+      NATS_TLS_ENABLED: ${NATS_TLS_ENABLED:-false}
+      NATS_TLS_CERT_FILE: ${NATS_TLS_CERT_FILE:-/etc/nats/ssl/server.crt}
+      NATS_TLS_KEY_FILE: ${NATS_TLS_KEY_FILE:-/etc/nats/ssl/server.key}
+      NATS_TLS_CA_FILE: ${NATS_TLS_CA_FILE:-/etc/nats/ssl/root.crt}
+      NATS_MAX_PAYLOAD: ${NATS_MAX_PAYLOAD:-16MB}
+      NATS_MAX_PENDING: ${NATS_MAX_PENDING:-256MB}
+      NATS_WRITE_DEADLINE: ${NATS_WRITE_DEADLINE:-10s}
+      NATS_PING_INTERVAL: ${NATS_PING_INTERVAL:-20s}
+      NATS_PING_MAX: ${NATS_PING_MAX:-3}
+      NATS_MAX_CONNECTIONS: ${NATS_MAX_CONNECTIONS:-20000}
+      NATS_MAX_SUBSCRIPTIONS: ${NATS_MAX_SUBSCRIPTIONS:-100000}
+      NATS_JETSTREAM_STORE_DIR: ${NATS_JETSTREAM_STORE_DIR:-/data/nats}
+      NATS_JETSTREAM_MAX_MEMORY_STORE: ${NATS_JETSTREAM_MAX_MEMORY_STORE:-1GB}
+      NATS_JETSTREAM_MAX_FILE_STORE: ${NATS_JETSTREAM_MAX_FILE_STORE:-250GB}
+      NATS_JETSTREAM_SYNC_INTERVAL: ${NATS_JETSTREAM_SYNC_INTERVAL:-2m}
+
+    volumes:
+      - ./script/nats-server.conf:/etc/nats/nats-server.conf:ro
+      - ./script/start-nats.sh:/usr/local/bin/start-nats.sh:ro
+      - nats_data:/data/nats
+      - ./ssl/generales:/etc/nats/ssl:ro
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+
+    command:
+      - "/bin/sh"
+      - "/usr/local/bin/start-nats.sh"
+
+    ports:
+      - "${NATS_BIND_PUBLIC_IP:-100.121.34.76}:${NATS_PORT:-4223}:${NATS_PORT:-4223}"
+      - "${NATS_BIND_LOCAL_IP:-127.0.0.1}:${NATS_PORT:-4223}:${NATS_PORT:-4223}"
+      - "${NATS_BIND_PUBLIC_IP:-100.121.34.76}:${NATS_HTTP_PORT:-8223}:${NATS_HTTP_PORT:-8223}"
+      - "${NATS_BIND_LOCAL_IP:-127.0.0.1}:${NATS_HTTP_PORT:-8223}:${NATS_HTTP_PORT:-8223}"
+      - "${NATS_BIND_CLUSTER_IP:-100.121.34.76}:${NATS_CLUSTER_PORT:-6223}:${NATS_CLUSTER_PORT:-6223}"
+
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:${NATS_HTTP_PORT:-8223}/healthz | grep -q 'ok'"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+    networks:
+      - stack-network
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    cpus: ${NATS_CONTAINER_CPUS:-8.0}
+    mem_limit: ${NATS_CONTAINER_MEMORY:-10g}
+    pids_limit: ${NATS_CONTAINER_PIDS_LIMIT:-4096}
+
+    ulimits:
+      nofile:
+        soft: ${NATS_ULIMIT_NOFILE_SOFT:-65536}
+        hard: ${NATS_ULIMIT_NOFILE_HARD:-65536}
+
+networks:
+  stack-network:
+    name: stack-network
+    driver: bridge
+
+volumes:
+  nats_data:

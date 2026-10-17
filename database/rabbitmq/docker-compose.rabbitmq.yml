@@ -1,0 +1,90 @@
+# 🗄️ SERVICIOS EXTERNOS PARA n8n
+# ================================
+# Este docker-compose.rabbitmq.yml levanta el servicio EXTERNO que n8n necesita:
+# - RabbitMQ: Message broker (cola de trabajos para workers distribuidos)
+#
+# Estos servicios son COMPARTIDOS por:
+# - PC Local (docker-compose.yml)
+# - VPS Remoto (vps/docker-compose.vps.yml)
+#
+# ⚠️ IMPORTANTE: Levanta ESTO PRIMERO, antes de levantarn8n en PC o VPS
+
+services:
+
+  # ================================
+  # 🐰 RabbitMQ - Message Broker
+  # ================================
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: rabbitmq
+    restart: always # Reinicia SIEMPRE, incluso después de reboot
+
+    # Variables de entorno
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-KevinsAdmin}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-Kevins1612522026}
+      RABBITMQ_CHANNEL_MAX: ${RABBITMQ_CHANNEL_MAX:-4096}
+      RABBITMQ_HEARTBEAT: ${RABBITMQ_HEARTBEAT:-60}
+      RABBITMQ_FRAME_MAX: ${RABBITMQ_FRAME_MAX:-131072}
+      # IMPORTANTE para Cloudflare, confía en los headers de proxy para IP real y protocolo
+      TZ: ${TZ:-America/Bogota}
+      GENERIC_TIMEZONE: ${GENERIC_TIMEZONE:-America/Bogota}
+
+    # Datos persistentes (en carpeta ./volumes/)
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+      - ./ssl/generales:/etc/rabbitmq/ssl:ro
+      - ./ssl/generate-rabbitmq.conf:/docker-entrypoint.d/10-generate-rabbitmq.conf.sh:ro
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+
+    # Puertos
+    # 5672: AMQP port (para conexiones de aplicaciones)
+    # 5671: AMQP SSL port (seguro)
+    # 15672: Management UI (para administración web, sin TLS para simplificar)
+    ports:
+      - "100.121.34.76:5672:5672"
+      - "127.0.0.1:5672:5672"
+      - "100.121.34.76:5671:5671"
+      - "127.0.0.1:5671:5671"
+      - "100.121.34.76:15672:15672"
+      - "127.0.0.1:15672:15672"
+      - "127.0.0.1:15671:15671"
+
+    # Healthcheck
+    healthcheck:
+      test: [ "CMD", "rabbitmq-diagnostics", "ping" ]
+      interval: 10s
+      timeout: 30s
+      retries: 5
+      start_period: 30s
+
+    # Red
+    networks:
+      - stack-network
+
+    # Logs
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    # Limites de recursos (12GB VPS independiente)
+    deploy:
+      resources:
+        limits:
+          memory: 10G
+        reservations:
+          memory: 2G
+
+# ================================
+# 🌐 RED COMPARTIDA
+# ================================
+networks:
+  stack-network:
+    name: stack-network
+    driver: bridge
+
+volumes:
+  rabbitmq_data:

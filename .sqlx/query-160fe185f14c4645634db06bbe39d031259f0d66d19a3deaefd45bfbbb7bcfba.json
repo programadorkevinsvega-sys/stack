@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE subscriptions SET plan_id=$2,status=$3,billing_cycle=$4,current_period_start=$5,current_period_end=$6,cancel_at_period_end=$7,canceled_at=$8,updated_at=$9 WHERE id=$1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Varchar",
+        "Varchar",
+        "Timestamptz",
+        "Timestamptz",
+        "Bool",
+        "Timestamptz",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "160fe185f14c4645634db06bbe39d031259f0d66d19a3deaefd45bfbbb7bcfba"
+}

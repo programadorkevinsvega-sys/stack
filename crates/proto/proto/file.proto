@@ -1,0 +1,114 @@
+syntax = "proto3";
+package ai_gateway.files.v1;
+service FileService {
+  rpc CreateFolder(CreateFolderRequest) returns (FolderResponse);
+  rpc ListFolders(ListFoldersRequest) returns (ListFoldersResponse);
+  rpc CreateFile(CreateFileRequest) returns (FileResponse);
+  rpc ListFiles(ListFilesRequest) returns (ListFilesResponse);
+  rpc ConfirmFile(ConfirmFileRequest) returns (FileResponse);
+  rpc UpdateFileStatus(UpdateFileStatusRequest) returns (FileResponse);
+  rpc CreateUploadUrl(CreateUploadUrlRequest) returns (UploadUrlResponse);
+  rpc PurgeFile(PurgeFileRequest) returns (PurgeFileResponse);
+  rpc CreateDownloadUrl(CreateDownloadUrlRequest) returns (DownloadUrlResponse);
+  rpc UpdateFile(UpdateFileRequest) returns (FileResponse);
+  rpc UpdateFolder(UpdateFolderRequest) returns (FolderResponse);
+  rpc DeleteFolder(DeleteFolderRequest) returns (DeleteFolderResponse);
+  rpc DeleteFile(DeleteFileRequest) returns (DeleteFileResponse);
+  rpc SearchVectors(SearchVectorsRequest) returns (SearchVectorsResponse);
+  rpc GetVectorUsage(GetVectorUsageRequest) returns (VectorUsageResponse);
+  rpc GetStorageUsage(GetStorageUsageRequest) returns (StorageUsageResponse);
+  rpc DeleteFileVectors(DeleteFileVectorsRequest) returns (DeleteFileVectorsResponse);
+  rpc ReindexFileVectors(ReindexFileVectorsRequest) returns (ReindexFileVectorsResponse);
+}
+message Folder { string id=1; string user_id=2; optional string parent_id=3; string name=4; string created_at=5; string updated_at=6; }
+message CreateFolderRequest { string user_id=1; optional string parent_id=2; string name=3; string idempotency_key=4; }
+message ListFoldersRequest { string user_id=1; optional string parent_id=2; }
+message FolderResponse { Folder folder=1; }
+message ListFoldersResponse { repeated Folder folders=1; }
+message File { string id=1; string user_id=2; optional string folder_id=3; string name=4; string mime_type=5; int64 size_bytes=6; string sha256=7; string status=8; string object_key=9; string created_at=10; string updated_at=11; }
+message CreateFileRequest { string user_id=1; optional string folder_id=2; string name=3; string mime_type=4; int64 size_bytes=5; string sha256=6; string idempotency_key=7; optional string object_key=8; }
+message FileResponse { File file=1; }
+message ListFilesRequest { string user_id=1; optional string folder_id=2; }
+message ListFilesResponse { repeated File files=1; }
+message ConfirmFileRequest { string user_id=1; string file_id=2; }
+message UpdateFileStatusRequest { string user_id=1; string file_id=2; string status=3; string error=4; }
+message DeleteFileRequest { string user_id=1; string file_id=2; string reason=3; }
+message DeleteFileResponse { bool success=1; }
+message CreateUploadUrlRequest { string user_id=1; string file_id=2; optional int32 expires_seconds=3; }
+message UploadUrlResponse { File file=1; string upload_url=2; map<string,string> required_headers=3; string expires_at=4; }
+message PurgeFileRequest { string user_id=1; string file_id=2; string reason=3; }
+message PurgeFileResponse { bool success=1; }
+message CreateDownloadUrlRequest { string user_id=1; string file_id=2; optional int32 expires_seconds=3; }
+message DownloadUrlResponse { File file=1; string download_url=2; string expires_at=3; }
+message UpdateFileRequest { string user_id=1; string file_id=2; optional string name=3; optional string folder_id=4; }
+message UpdateFolderRequest { string user_id=1; string folder_id=2; optional string name=3; optional string parent_id=4; }
+message DeleteFolderRequest { string user_id=1; string folder_id=2; string reason=3; }
+message DeleteFolderResponse { bool success=1; }
+
+// user_id is supplied only by trusted internal callers. Public HTTP clients
+// never control the Qdrant ownership filter.
+message SearchVectorsRequest {
+  string user_id = 1;
+  string query = 2;
+  int32 limit = 3;
+  optional string file_id = 4;
+}
+message VectorSearchHit {
+  string chunk_id = 1;
+  string document_id = 2;
+  string file_id = 3;
+  int32 chunk_index = 4;
+  string content = 5;
+  string content_hash = 6;
+  string embedding_model = 7;
+  string embedding_version = 8;
+  float score = 9;
+}
+message SearchVectorsResponse {
+  repeated VectorSearchHit hits = 1;
+}
+message GetVectorUsageRequest {
+  string user_id = 1;
+}
+message VectorUsageResponse {
+  string user_id = 1;
+  int64 vector_count = 2;
+  int64 vector_bytes = 3;
+  int64 document_count = 4;
+  string collection_mode = 5;
+  string collection_name = 6;
+  string updated_at = 7;
+  int64 input_tokens = 8;
+  int64 cost_micros = 9;
+  int64 tokens_avoided = 10;
+  int64 completed_jobs = 11;
+  int64 failed_jobs = 12;
+}
+message GetStorageUsageRequest {
+  string user_id = 1;
+}
+message StorageUsageResponse {
+  string user_id = 1;
+  int64 used_bytes = 2;
+  int64 quota_bytes = 3;
+  int64 remaining_bytes = 4;
+  int64 file_count = 5;
+  int64 max_files = 6;
+  string updated_at = 7;
+}
+message DeleteFileVectorsRequest {
+  string user_id = 1;
+  string file_id = 2;
+  string reason = 3;
+}
+message DeleteFileVectorsResponse {
+  bool success = 1;
+  int64 deleted_vectors = 2;
+}
+message ReindexFileVectorsRequest {
+  string user_id = 1;
+  string file_id = 2;
+}
+message ReindexFileVectorsResponse {
+  bool accepted = 1;
+}

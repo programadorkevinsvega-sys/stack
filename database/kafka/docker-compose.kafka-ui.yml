@@ -1,0 +1,53 @@
+# 🗄️ SERVICIOS EXTERNOS PARA n8n
+# ================================
+# Este docker-compose.kafka-ui.yml levanta la UI de Kafka
+# - Kafka UI: Interfaz web para administrar Kafka
+#
+# Conecta a Kafka en puerto 9092 (PLAINTEXT)
+
+services:
+
+  # ================================
+  # 📊 Kafka UI - Admin Console
+  # ================================
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    restart: always
+    
+    environment:
+      # Cluster de Kafka local
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      # SASL/SSL (opcional si lo necesitas)
+      # KAFKA_CLUSTERS_0_SECURITY_PROTOCOL: SSL
+      # KAFKA_CLUSTERS_0_PROPERTIES_SECURITY_PROTOCOL: SSL
+      
+      # Autenticación básica HTTP
+      AUTH_TYPE: LOGIN_FORM
+      SPRING_SECURITY_USER_NAME: KevinsAdmin
+      SPRING_SECURITY_USER_PASSWORD: Kevins1612522026
+      
+      TZ: America/Bogota
+    
+    # Puertos
+    ports:
+      - "100.121.34.76:8080:8080"
+      - "127.0.0.1:8080:8080"
+    
+    # Red compartida con otros servicios
+    networks:
+      - stack-network
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+# Red compartida con todos los servicios
+networks:
+  stack-network:
+    external: true
+    name: stack-network

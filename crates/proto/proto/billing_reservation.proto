@@ -1,0 +1,160 @@
+syntax = "proto3";
+
+package ai_gateway.billing.v1;
+
+// Servicio de reserva y débito de saldo.
+// Implementa el patrón de reserva optimista para evitar balance negativo.
+service BillingReservationService {
+    // Reserva saldo estimado antes de la llamada a Bedrock.
+    // Si no hay saldo suficiente → approved = false.
+    rpc ReserveBalance(ReserveRequest) returns (ReserveResponse);
+
+    // Libera una reserva sin cobrar (error en Bedrock antes de consumir tokens).
+    rpc ReleaseReservation(ReleaseReservationRequest) returns (ReleaseReservationResponse);
+
+    // Confirma el débito real después de la llamada a Bedrock.
+    // Calcula el costo con los tokens reales y ajusta la diferencia.
+    rpc ConfirmDebit(ConfirmDebitRequest) returns (ConfirmDebitResponse);
+}
+
+service BillingWalletService {
+    rpc GetWallet(GetWalletRequest) returns (GetWalletResponse);
+    rpc ListLedger(ListLedgerRequest) returns (ListLedgerResponse);
+    rpc ListTransactions(ListTransactionsRequest) returns (ListTransactionsResponse);
+    rpc AdjustWallet(AdjustWalletRequest) returns (AdjustWalletResponse);
+    rpc ReconcileWallet(ReconcileWalletRequest) returns (ReconcileWalletResponse);
+    rpc CloseBillingPeriod(CloseBillingPeriodRequest) returns (CloseBillingPeriodResponse);
+}
+
+message ReserveRequest {
+    string user_id = 1;
+    string idempotency_key = 2;
+    string estimated_amount = 3;     // Decimal serializado (ej. "0.0050")
+    int32 estimated_max_tokens = 4;
+}
+
+message ReserveResponse {
+    bool approved = 1;
+    string reservation_id = 2;       // UUID de la reserva creada
+    string available_balance = 3;    // balance disponible después de la reserva
+}
+
+message ReleaseReservationRequest {
+    string reservation_id = 1;
+    string user_id = 2;
+}
+
+message ReleaseReservationResponse {
+    bool released = 1;
+}
+
+message ConfirmDebitRequest {
+    string reservation_id = 1;
+    string user_id = 2;
+    string request_id = 3;
+    string actual_input_tokens = 4;
+    string actual_output_tokens = 5;
+    string model_catalog_id = 6;
+}
+
+message ConfirmDebitResponse {
+    bool success = 1;
+    string new_balance = 2;
+    string charged_amount = 3;
+    string aws_cost = 4;
+}
+
+message Wallet {
+    string user_id = 1;
+    string balance = 2;
+    string reserved_balance = 3;
+    string available_balance = 4;
+    string currency = 5;
+    string low_balance_threshold = 6;
+    string updated_at = 7;
+}
+
+message WalletLedgerEntry {
+    string id = 1;
+    string user_id = 2;
+    string entry_type = 3;
+    string amount = 4;
+    string balance_after = 5;
+    string reference_type = 6;
+    optional string reference_id = 7;
+    string idempotency_key = 8;
+    string created_at = 9;
+}
+
+message BillingTransaction {
+    string id = 1;
+    string user_id = 2;
+    string type = 3;
+    string amount = 4;
+    string currency = 5;
+    optional string provider = 6;
+    optional string provider_reference = 7;
+    string status = 8;
+    string created_at = 9;
+}
+
+message GetWalletRequest {
+    string user_id = 1;
+}
+
+message GetWalletResponse {
+    optional Wallet wallet = 1;
+}
+
+message ListLedgerRequest {
+    string user_id = 1;
+    int32 limit = 2;
+}
+
+message ListLedgerResponse {
+    repeated WalletLedgerEntry entries = 1;
+}
+
+message ListTransactionsRequest {
+    string user_id = 1;
+    int32 limit = 2;
+}
+
+message ListTransactionsResponse {
+    repeated BillingTransaction transactions = 1;
+}
+
+message AdjustWalletRequest {
+    string user_id = 1;
+    string amount = 2;
+    string currency = 3;
+    string reason = 4;
+    string admin_id = 5;
+    string idempotency_key = 6;
+}
+
+message AdjustWalletResponse {
+    Wallet wallet = 1;
+}
+
+message ReconcileWalletRequest {
+    string user_id = 1;
+}
+
+message ReconcileWalletResponse {
+    bool reconciled = 1;
+    Wallet wallet = 2;
+}
+
+message CloseBillingPeriodRequest {
+    string user_id = 1;
+    string subscription_id = 2;
+    string period_start = 3;
+    string period_end = 4;
+    string total_usage_cost = 5;
+    string invoice_id = 6;
+}
+
+message CloseBillingPeriodResponse {
+    bool published = 1;
+}

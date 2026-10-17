@@ -1,0 +1,122 @@
+# 🗄️ SERVICIOS EXTERNOS PARA n8n
+# ================================
+# Este docker-compose.mysql.yml levanta el servicio EXTERNO que n8n necesita:
+# - MySQL: Base de datos relacional (almacena datos, ejecutiones, y más)
+#
+# Estos servicios son COMPARTIDOS por:
+# - PC Local (docker-compose.yml)
+# - VPS Remoto (vps/docker-compose.vps.yml)
+#
+# ⚠️ IMPORTANTE: Levanta ESTO PRIMERO, antes de levantarn8n en PC o VPS
+
+services:
+
+  # ================================
+  # 🐬 MySQL - Base de Datos Relacional
+  # ================================
+  mysql:
+    image: mysql:8.4
+    container_name: mysql
+    restart: always # Reinicia automáticamente, incluso después de reboot
+
+    # Variables de entorno
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-Kevins1612522026}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-n8n}
+      MYSQL_USER: ${MYSQL_USER:-KevinsAdmin}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-Kevins1612522026}
+      MYSQL_ROOT_HOST: ${MYSQL_ROOT_HOST:-%}
+      # IMPORTANTE para Cloudflare, confía en los headers de proxy para IP real y protocolo
+      TZ: ${TZ:-America/Bogota}
+      GENERIC_TIMEZONE: ${GENERIC_TIMEZONE:-America/Bogota}
+
+    # Datos persistentes (en carpeta ./volumes/)
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - mysql_config:/etc/mysql/conf.d
+      - ./ssl/generales:/etc/mysql/certs/generales:ro
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+
+    # Puertos
+    ports:
+      - "127.0.0.1:3306:3306"
+      - "100.121.34.76:3306:3306"
+
+    # Comando personalizado con SSL/TLS opcional
+    # Usamos docker-entrypoint.sh (entrypoint de la imagen) para que inicialice la DB correctamente
+    command:
+      - "--character-set-server=utf8mb4"
+      - "--collation-server=utf8mb4_unicode_ci"
+
+    # Healthcheck
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-Kevins1612522026}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+    # Red
+    networks:
+      - stack-network
+
+    # Logs
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ================================
+  # 🎨 PhpMyAdmin - Administrador
+  # ================================
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: n8n-phpmyadmin
+    restart: always # Reinicia automáticamente, incluso después de reboot
+
+    # Variables de entorno
+    environment:
+      PMA_HOST: ${PMA_HOST:-mysql}
+      PMA_PORT: ${PMA_PORT:-3306}
+      PMA_ROOT_PASSWORD: ${PMA_ROOT_PASSWORD:-Kevins1612522026}
+      # IMPORTANTE para Cloudflare, confía en los headers de proxy para IP real y protocolo
+      TZ: ${TZ:-America/Bogota}
+      GENERIC_TIMEZONE: ${GENERIC_TIMEZONE:-America/Bogota}
+      # PMA_USER: ${PMA_USER:-KevinsAdmin}
+      # PMA_PASSWORD: ${PMA_PASSWORD:-Kevins1612522026}
+
+    ports:
+      - "100.121.34.76:8084:80"
+      - "127.0.0.1:8084:80"
+
+    # Dependencias
+    depends_on:
+      - mysql
+
+    # Red
+    networks:
+      - stack-network
+    # Volúmenes para sincronizar hora local (opcional pero recomendado)
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+
+    # Logs
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# ================================
+# 🌐 RED COMPARTIDA
+# ================================
+networks:
+  stack-network:
+    name: stack-network
+    driver: bridge
+
+volumes:
+  mysql_data:
+  mysql_config:

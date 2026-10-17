@@ -1,0 +1,48 @@
+loki.write "local" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}
+
+loki.process "microservices" {
+  forward_to = [loki.write.local.receiver]
+
+  stage.json {
+    expressions = {
+      level = "level",
+      target = "target",
+      timestamp = "timestamp",
+    }
+  }
+
+  stage.labels {
+    values = {
+      level = "",
+      target = "",
+    }
+  }
+
+  stage.timestamp {
+    source = "timestamp"
+    format = "RFC3339Nano"
+  }
+}
+
+loki.source.file "microservices" {
+  targets = [
+    {"__path__" = "/var/log/nexus/api-gateway.log", "service" = "api-gateway", "job" = "nexus-backend"},
+    {"__path__" = "/var/log/nexus/api-service.log", "service" = "api-service", "job" = "nexus-backend"},
+    {"__path__" = "/var/log/nexus/auth-service.log", "service" = "auth-service", "job" = "nexus-backend"},
+    {"__path__" = "/var/log/nexus/billing-service.log", "service" = "billing-service", "job" = "nexus-backend"},
+    {"__path__" = "/var/log/nexus/credential-manager.log", "service" = "credential-manager", "job" = "nexus-backend"},
+    {"__path__" = "/var/log/nexus/customer-bff.log", "service" = "customer-bff", "job" = "nexus-backend"},
+    {"__path__" = "/var/log/nexus/invoice-service.log", "service" = "invoice-service", "job" = "nexus-backend"},
+    {"__path__" = "/var/log/nexus/key-services.log", "service" = "key-services", "job" = "nexus-backend"},
+    {"__path__" = "/var/log/nexus/model-router.log", "service" = "model-router", "job" = "nexus-backend"},
+    {"__path__" = "/var/log/nexus/payment-services.log", "service" = "payment-services", "job" = "nexus-backend"},
+    {"__path__" = "/var/log/nexus/subscription-service.log", "service" = "subscription-service", "job" = "nexus-backend"},
+    {"__path__" = "/var/log/nexus/usage-service.log", "service" = "usage-service", "job" = "nexus-backend"},
+    {"__path__" = "/var/log/nexus/s3-gateway.log", "service" = "s3-gateway", "job" = "nexus-backend"},
+  ]
+  forward_to = [loki.process.microservices.receiver]
+}

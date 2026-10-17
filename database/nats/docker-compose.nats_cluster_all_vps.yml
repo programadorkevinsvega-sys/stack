@@ -1,0 +1,168 @@
+# 🗄️ NATS JetStream Cluster - 3 Nodos en un VPS
+# ==============================================
+# Este docker-compose levanta 3 nodos NATS formando un cluster
+# Ideal para alta disponibilidad sin necesidad de múltiples VPS
+#
+# ⚠️ IMPORTANTE:
+# - Cada nodo usa puertos diferentes para evitar conflictos
+# - Los nodos se conectan entre sí formando mesh cluster
+# - Usa los archivos: node1.env, node2.env, node3.env
+
+services:
+
+  # ================================
+  # 📡 NATS JetStream - NODO 1
+  # ================================
+  nats1:
+    image: nats:2.10-alpine
+    container_name: nats-jetstream-node1
+    restart: always
+    env_file:
+      - node_all_1.env
+    command: ["sh", "/usr/local/bin/start-nats.sh"]
+    environment:
+      NATS_PORT: ${NATS_PORT:-4223}
+      NATS_HTTP_PORT: ${NATS_HTTP_PORT:-8223}
+      NATS_CLUSTER_PORT: ${NATS_CLUSTER_PORT:-6223}
+      NATS_CLUSTER_ENABLED: ${NATS_CLUSTER_ENABLED:-true}
+      NATS_CLUSTER_NAME: ${NATS_CLUSTER_NAME:-nats-jetstream-cluster}
+      NATS_CLUSTER_LISTEN_HOST: ${NATS_CLUSTER_LISTEN_HOST:-0.0.0.0}
+      NATS_CLUSTER_ADVERTISE_HOST: ${NATS_CLUSTER_ADVERTISE_HOST:-nats1}
+      NATS_CLUSTER_ADVERTISE_PORT: ${NATS_CLUSTER_ADVERTISE_PORT:-6223}
+      NATS_CLUSTER_ROUTES: ${NATS_CLUSTER_ROUTES:-nats://nats_route:KevinsCluster1612522026@nats1:6223,nats://nats_route:KevinsCluster1612522026@nats2:6224,nats://nats_route:KevinsCluster1612522026@nats3:6225}
+      NATS_JETSTREAM_STORE_DIR: ${NATS_JETSTREAM_STORE_DIR:-/data/nats}
+      NATS_JETSTREAM_MAX_MEMORY_STORE: ${NATS_JETSTREAM_MAX_MEMORY_STORE:-1GB}
+      NATS_JETSTREAM_MAX_FILE_STORE: ${NATS_JETSTREAM_MAX_FILE_STORE:-250GB}
+    volumes:
+      - ./script/nats-server.conf:/etc/nats/nats-server.conf:ro
+      - ./script/start-nats.sh:/usr/local/bin/start-nats.sh:ro
+      - ./volumes/node1/data:/data/nats
+      - ./ssl/generales:/etc/nats/ssl:ro
+    ports:
+      - "${NATS_BIND_PUBLIC_IP:-127.0.0.1}:4223:4223"
+      - "${NATS_BIND_PUBLIC_IP:-127.0.0.1}:8223:8223"
+    expose:
+      - "6223"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8223/healthz | grep -q 'ok'"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - nats-cluster-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    cpus: 2.0
+    mem_limit: 4g
+
+  # ================================
+  # 📡 NATS JetStream - NODO 2
+  # ================================
+  nats2:
+    image: nats:2.10-alpine
+    container_name: nats-jetstream-node2
+    restart: always
+    env_file:
+      - node_all_2.env
+    command: ["sh", "/usr/local/bin/start-nats.sh"]
+    environment:
+      NATS_PORT: ${NATS_PORT:-4224}
+      NATS_HTTP_PORT: ${NATS_HTTP_PORT:-8224}
+      NATS_CLUSTER_PORT: ${NATS_CLUSTER_PORT:-6224}
+      NATS_CLUSTER_ENABLED: ${NATS_CLUSTER_ENABLED:-true}
+      NATS_CLUSTER_NAME: ${NATS_CLUSTER_NAME:-nats-jetstream-cluster}
+      NATS_CLUSTER_LISTEN_HOST: ${NATS_CLUSTER_LISTEN_HOST:-0.0.0.0}
+      NATS_CLUSTER_ADVERTISE_HOST: ${NATS_CLUSTER_ADVERTISE_HOST:-nats2}
+      NATS_CLUSTER_ADVERTISE_PORT: ${NATS_CLUSTER_ADVERTISE_PORT:-6224}
+      NATS_CLUSTER_ROUTES: ${NATS_CLUSTER_ROUTES:-nats://nats_route:KevinsCluster1612522026@nats1:6223,nats://nats_route:KevinsCluster1612522026@nats2:6224,nats://nats_route:KevinsCluster1612522026@nats3:6225}
+      NATS_JETSTREAM_STORE_DIR: ${NATS_JETSTREAM_STORE_DIR:-/data/nats}
+      NATS_JETSTREAM_MAX_MEMORY_STORE: ${NATS_JETSTREAM_MAX_MEMORY_STORE:-1GB}
+      NATS_JETSTREAM_MAX_FILE_STORE: ${NATS_JETSTREAM_MAX_FILE_STORE:-250GB}
+    volumes:
+      - ./script/nats-server.conf:/etc/nats/nats-server.conf:ro
+      - ./script/start-nats.sh:/usr/local/bin/start-nats.sh:ro
+      - ./volumes/node2/data:/data/nats
+      - ./ssl/generales:/etc/nats/ssl:ro
+    ports:
+      - "${NATS_BIND_PUBLIC_IP:-127.0.0.1}:4224:4224"
+      - "${NATS_BIND_PUBLIC_IP:-127.0.0.1}:8224:8224"
+    expose:
+      - "6224"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8224/healthz | grep -q 'ok'"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - nats-cluster-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    cpus: 2.0
+    mem_limit: 4g
+    depends_on:
+      - nats1
+
+  # ================================
+  # 📡 NATS JetStream - NODO 3
+  # ================================
+  nats3:
+    image: nats:2.10-alpine
+    container_name: nats-jetstream-node3
+    restart: always
+    env_file:
+      - node_all_3.env
+    command: ["sh", "/usr/local/bin/start-nats.sh"]
+    environment:
+      NATS_PORT: ${NATS_PORT:-4225}
+      NATS_HTTP_PORT: ${NATS_HTTP_PORT:-8225}
+      NATS_CLUSTER_PORT: ${NATS_CLUSTER_PORT:-6225}
+      NATS_CLUSTER_ENABLED: ${NATS_CLUSTER_ENABLED:-true}
+      NATS_CLUSTER_NAME: ${NATS_CLUSTER_NAME:-nats-jetstream-cluster}
+      NATS_CLUSTER_LISTEN_HOST: ${NATS_CLUSTER_LISTEN_HOST:-0.0.0.0}
+      NATS_CLUSTER_ADVERTISE_HOST: ${NATS_CLUSTER_ADVERTISE_HOST:-nats3}
+      NATS_CLUSTER_ADVERTISE_PORT: ${NATS_CLUSTER_ADVERTISE_PORT:-6225}
+      NATS_CLUSTER_ROUTES: ${NATS_CLUSTER_ROUTES:-nats://nats_route:KevinsCluster1612522026@nats1:6223,nats://nats_route:KevinsCluster1612522026@nats2:6224,nats://nats_route:KevinsCluster1612522026@nats3:6225}
+      NATS_JETSTREAM_STORE_DIR: ${NATS_JETSTREAM_STORE_DIR:-/data/nats}
+      NATS_JETSTREAM_MAX_MEMORY_STORE: ${NATS_JETSTREAM_MAX_MEMORY_STORE:-1GB}
+      NATS_JETSTREAM_MAX_FILE_STORE: ${NATS_JETSTREAM_MAX_FILE_STORE:-250GB}
+    volumes:
+      - ./script/nats-server.conf:/etc/nats/nats-server.conf:ro
+      - ./script/start-nats.sh:/usr/local/bin/start-nats.sh:ro
+      - ./volumes/node3/data:/data/nats
+      - ./ssl/generales:/etc/nats/ssl:ro
+    ports:
+      - "${NATS_BIND_PUBLIC_IP:-127.0.0.1}:4225:4225"
+      - "${NATS_BIND_PUBLIC_IP:-127.0.0.1}:8225:8225"
+    expose:
+      - "6225"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8225/healthz | grep -q 'ok'"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - nats-cluster-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    cpus: 2.0
+    mem_limit: 4g
+    depends_on:
+      - nats1
+      - nats2
+
+networks:
+  nats-cluster-network:
+    name: nats-cluster-network
+    driver: bridge

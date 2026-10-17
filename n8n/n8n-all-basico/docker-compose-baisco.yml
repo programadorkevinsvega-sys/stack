@@ -1,0 +1,33 @@
+version: '3.8'
+
+networks:
+  n8n_network:
+    driver: bridge
+
+x-n8n-base: &n8n-base
+  image: docker.n8n.io/n8nio/n8n:latest
+  restart: always
+  environment:
+    TZ: ${TZ:-America/Bogota}
+    GENERIC_TIMEZONE: ${GENERIC_TIMEZONE:-America/Bogota}
+  networks:
+    - n8n_network
+  env_file:
+    - .env
+  volumes:
+    - ./volumes/n8n-data:/home/node/.n8n
+
+services:
+  n8n-web:
+    <<: *n8n-base
+    container_name: n8n_web
+    command: start
+    ports:
+      - "127.0.0.1:5678:5678"
+      - "100.121.34.76:5678:5678"
+
+  n8n-worker:
+    <<: *n8n-base
+    command: worker
+    deploy:
+      replicas: 2 # Iniciamos con 2 workers

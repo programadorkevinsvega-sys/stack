@@ -1,0 +1,125 @@
+# Kong API Gateway Configuration
+# Configuración del gateway API de Kong para Supabase
+
+# NOTA: Kong 2.8.1 solo soporta _format_version 1.1 o 2.1
+_format_version: "2.1"
+
+services:
+  # Supabase Studio
+  - name: studio
+    url: http://studio:3000/
+    routes:
+      - name: studio
+        strip_path: true
+        paths:
+          - "/"
+    plugins:
+      - name: cors
+
+  # PostgREST API
+  - name: rest
+    _comment: "PostgREST API"
+    url: http://rest:3000/
+    routes:
+      - name: rest
+        strip_path: true
+        paths:
+          - "/rest/v1/"
+    plugins:
+      - name: cors
+
+  # Postgres Meta API (esquemas, tablas, etc)
+  - name: pg-meta
+    _comment: "Postgres Meta API for schema/table browsing"
+    url: http://meta:8080/
+    routes:
+      - name: pg-meta
+        strip_path: true
+        paths:
+          - "/pg"
+    plugins:
+      - name: cors
+
+  # Auth API
+  - name: auth
+    _comment: "GoTrue Auth API"
+    url: http://auth:9999/
+    routes:
+      - name: auth
+        strip_path: true
+        paths:
+          - "/auth/v1/"
+    plugins:
+      - name: cors
+
+  # Storage API
+  - name: storage
+    _comment: "Storage API"
+    url: http://storage:5000/
+    routes:
+      - name: storage
+        strip_path: true
+        paths:
+          - "/storage/v1/"
+    plugins:
+      - name: cors
+
+  # Realtime API
+  - name: realtime
+    _comment: "Realtime API"
+    url: http://realtime:4000/socket/
+    routes:
+      - name: realtime
+        strip_path: true
+        paths:
+          - "/realtime/v1/"
+    plugins:
+      - name: cors
+
+  # Functions API
+  - name: functions
+    _comment: "Edge Functions API"
+    url: http://functions:9000/
+    routes:
+      - name: functions
+        strip_path: true
+        paths:
+          - "/functions/v1/"
+    plugins:
+      - name: cors
+
+# Configuración CORS global
+plugins:
+  - name: cors
+    config:
+      origins:
+        - "*"
+      methods:
+        - GET
+        - POST
+        - PUT
+        - PATCH
+        - DELETE
+        - OPTIONS
+      headers:
+        - Accept
+        - Accept-Version
+        - Content-Length
+        - Content-MD5
+        - Content-Type
+        - Date
+        - X-Auth-Token
+        - Authorization
+        - X-Requested-With
+        - Access-Control-Allow-Origin
+        - Access-Control-Allow-Headers
+        - Access-Control-Allow-Methods
+      exposed_headers:
+        - X-Auth-Token
+        - X-Requested-With
+        - Access-Control-Allow-Origin
+        - Access-Control-Allow-Headers
+        - Access-Control-Allow-Methods
+      credentials: true
+      max_age: 3600
+      preflight_continue: false

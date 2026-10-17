@@ -1,0 +1,18 @@
+[package]
+name = "proto"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+tonic.workspace = true
+tonic-prost = "0.14"
+prost.workspace = true
+uuid.workspace = true
+chrono = { workspace = true, features = ["serde"] }
+serde.workspace = true
+
+[build-dependencies]
+tonic-build.workspace = true
+tonic-prost-build.workspace = true
+prost-build.workspace = true

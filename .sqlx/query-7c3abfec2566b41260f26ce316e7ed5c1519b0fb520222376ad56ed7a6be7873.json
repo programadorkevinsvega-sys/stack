@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO invoice_sequences (period_key,next_value)\n         VALUES ($1,1)\n         ON CONFLICT (period_key)\n         DO UPDATE SET next_value=invoice_sequences.next_value + 1, updated_at=now()\n         RETURNING invoice_sequences.next_value",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "next_value",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Bpchar"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "7c3abfec2566b41260f26ce316e7ed5c1519b0fb520222376ad56ed7a6be7873"
+}

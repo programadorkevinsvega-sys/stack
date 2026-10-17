@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO payment_methods (id,user_id,provider,provider_payment_method_id,brand,last4,exp_month,exp_year,is_default,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Bpchar",
+        "Int2",
+        "Int2",
+        "Bool",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "bccfc250dbb3042b3ddaad302dce3cc38fa8ffbaeedcdd26f9d8d9178841a4ce"
+}

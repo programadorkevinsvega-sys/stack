@@ -1,0 +1,91 @@
+# 🗄️ SERVICIOS EXTERNOS PARA n8n
+# ================================
+# Este docker-compose.yml levanta el servicio EXTERNO que n8n necesita:
+# - Vault: Almacén de secretos (opcional, para mayor seguridad)
+#
+# Estos servicios son COMPARTIDOS por:
+# - PC Local (docker-compose.yml)
+# - VPS Remoto (vps/docker-compose.vps.yml)
+#
+# ⚠️ IMPORTANTE: Levanta ESTO PRIMERO, antes de levantarn8n en PC o VPS
+
+services:
+
+  # ================================
+  # � Vault - Almacén de Secretos
+  # ================================
+
+  vault:
+    build:
+      context: .
+      dockerfile: Dockerfile.vault
+    container_name: vault
+    restart: always
+
+    environment:
+      VAULT_ADDR: ${VAULT_ADDR:-http://127.0.0.1:8500}
+      VAULT_API_ADDR: ${VAULT_API_ADDR:-http://127.0.0.1:8500}
+      VAULT_UI: ${VAULT_UI:-true}
+      VAULT_ENABLE_SSL: ${VAULT_ENABLE_SSL:-false}
+      VAULT_UNSEAL_KEY: ${VAULT_UNSEAL_KEY:-}
+      # IMPORTANTE para Cloudflare, confía en los headers de proxy para IP real y protocolo
+      TZ: ${TZ:-America/Bogota}
+      GENERIC_TIMEZONE: ${GENERIC_TIMEZONE:-America/Bogota}
+
+    cap_add:
+      - IPC_LOCK
+
+    volumes:
+      - vault_data:/vault/data
+      - ./ssl/generales:/vault/config/tls:ro
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+
+    # Puerto 8500 (evita conflictos)
+    ports:
+          - "100.121.34.76:8500:8500"
+          - "127.0.0.1:8500:8500"
+
+    # Healthcheck - Verifica que Vault está iniciado (sin inicializar es ok)
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "sh",
+          "-c",
+          "curl -f http://127.0.0.1:8500/v1/sys/health || exit 0"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+    # Red
+    networks:
+      - stack-network
+
+    # Logs
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    # Limites de recursos (16GB total: Vault 1GB)
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+
+# ================================
+# 🌐 RED COMPARTIDA
+# ================================
+networks:
+  stack-network:
+    name: stack-network
+    driver: bridge
+
+volumes:
+  vault_data:

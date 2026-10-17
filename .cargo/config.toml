@@ -1,0 +1,5 @@
+[env]
+# SQLx query metadata is committed in .sqlx so normal workspace checks do not
+# require a running PostgreSQL instance. Only the metadata preparation script
+# switches back to online validation.
+SQLX_OFFLINE = { value = "true", force = false }

@@ -1,0 +1,83 @@
+syntax = "proto3";
+
+package ai_gateway.invoice.v1;
+
+service InvoiceService {
+  rpc GetInvoice(GetInvoiceRequest) returns (GetInvoiceResponse);
+  rpc ListInvoicesByUser(ListInvoicesByUserRequest) returns (ListInvoicesByUserResponse);
+  rpc GetInvoicePdf(GetInvoicePdfRequest) returns (GetInvoicePdfResponse);
+  rpc GetNextInvoiceNumber(GetNextInvoiceNumberRequest) returns (GetNextInvoiceNumberResponse);
+  rpc OpenInvoice(ChangeInvoiceStatusRequest) returns (InvoiceResponse);
+  rpc MarkInvoicePaid(ChangeInvoiceStatusRequest) returns (InvoiceResponse);
+  rpc VoidInvoice(ChangeInvoiceStatusRequest) returns (InvoiceResponse);
+  rpc MarkInvoiceUncollectible(ChangeInvoiceStatusRequest) returns (InvoiceResponse);
+}
+
+message Invoice {
+  string id = 1;
+  string user_id = 2;
+  optional string subscription_id = 3;
+  string invoice_number = 4;
+  string period_start = 5;
+  string period_end = 6;
+  string subtotal = 7;
+  string tax = 8;
+  string total = 9;
+  string currency = 10;
+  string status = 11;
+  optional string due_date = 12;
+  optional string paid_at = 13;
+  optional string pdf_url = 14;
+  string created_at = 15;
+  repeated InvoiceLineItem line_items = 16;
+}
+
+message InvoiceLineItem {
+  string id = 1;
+  string invoice_id = 2;
+  string description = 3;
+  string quantity = 4;
+  string unit_price = 5;
+  string amount = 6;
+}
+
+message GetInvoiceRequest {
+  string invoice_id = 1;
+}
+
+message GetInvoiceResponse {
+  optional Invoice invoice = 1;
+}
+
+message ListInvoicesByUserRequest {
+  string user_id = 1;
+  int32 limit = 2;
+}
+
+message ListInvoicesByUserResponse {
+  repeated Invoice invoices = 1;
+}
+
+message GetInvoicePdfRequest {
+  string invoice_id = 1;
+}
+
+message GetInvoicePdfResponse {
+  string content_type = 1;
+  bytes pdf = 2;
+  string pdf_url = 3;
+}
+
+message GetNextInvoiceNumberRequest {}
+
+message GetNextInvoiceNumberResponse {
+  string invoice_number = 1;
+}
+
+message ChangeInvoiceStatusRequest {
+  string invoice_id = 1;
+}
+
+message InvoiceResponse {
+  Invoice invoice = 1;
+}

@@ -1,0 +1,43 @@
+# ========================================
+# Proxy Directory - Git Exclusions
+# ========================================
+
+# Logs
+logs/
+*.log
+access.log
+error.log
+
+# Certificados SSL (confidenciales)
+ssl/
+*.pem
+*.key
+*.crt
+*.csr
+letsencrypt/
+
+# Configuración local
+*.local.*
+.env.local
+
+# Traefik
+traefik/
+acme.json
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Temporales
+tmp/
+temp/
+*.tmp
+
+# IDE
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace

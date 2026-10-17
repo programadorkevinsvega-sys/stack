@@ -1,0 +1,3 @@
+ALTER TABLE file_quotas
+    ADD COLUMN IF NOT EXISTS quota_bytes BIGINT NOT NULL DEFAULT 0 CHECK (quota_bytes >= 0),
+    ADD COLUMN IF NOT EXISTS max_files BIGINT NOT NULL DEFAULT 0 CHECK (max_files >= 0);

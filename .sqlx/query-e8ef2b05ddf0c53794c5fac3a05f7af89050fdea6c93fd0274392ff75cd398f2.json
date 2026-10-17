@@ -1,0 +1,31 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE users SET email=$2, password_hash=$3, display_name=$4,\n            avatar_url=$5, email_verified_at=$6, mfa_enabled=$7, mfa_secret_encrypted=$8,\n            status=$9, failed_login_count=$10, locked_until=$11, last_login_at=$12,\n            last_login_ip=$13, updated_at=now() WHERE id=$1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        {
+          "Custom": {
+            "name": "citext",
+            "kind": "Simple"
+          }
+        },
+        "Varchar",
+        "Varchar",
+        "Text",
+        "Timestamptz",
+        "Bool",
+        "Bytea",
+        "Varchar",
+        "Int2",
+        "Timestamptz",
+        "Timestamptz",
+        "Inet"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e8ef2b05ddf0c53794c5fac3a05f7af89050fdea6c93fd0274392ff75cd398f2"
+}

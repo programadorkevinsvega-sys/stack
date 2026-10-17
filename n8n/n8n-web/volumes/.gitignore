@@ -1,0 +1,27 @@
+# ========================================
+# 📦 N8N Local Volumes - Git Exclusions
+# ========================================
+# Los datos locales de n8n se almacenan aquí
+# pero NO se deben subir a Git (son privados)
+
+# Ignorar todos los archivos dentro de n8n-data
+# EXCEPTO los archivos .gitkeep (que mantienen la estructura en Git)
+n8n-data/*
+!n8n-data/.gitkeep
+
+# Ignorar archivos de log y temporales
+*.log
+.DS_Store
+Thumbs.db
+
+# Clave de encriptación de n8n (CONFIDENCIAL)
+n8n-data/.n8n_encryption_key
+
+# Datos de credenciales (CONFIDENCIAL)
+n8n-data/databases/
+n8n-data/credentials/
+n8n-data/workflows/
+
+# Archivos temporales de Node.js
+n8n-data/*.tmp
+n8n-data/.cache/

@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM aws_account_models WHERE account_id = $1 AND model_catalog_id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "999cb6fd063f684b7834612c08f8c14b18031dcc2e8fb43fa96c3e4f8048b3c4"
+}

@@ -1,0 +1,17 @@
+# ============================================================
+# 🔐 SSL/mTLS OVERRIDE - activar con: docker compose -f docker-compose.yml -f docker-compose.ssl.yml up -d
+# ============================================================
+# Este archivo agrega los montajes de certificados SSL/TLS
+# y activa la verificación SSL cuando SSL_ENABLED=true en .env
+# ============================================================
+services:
+  n8n-web:
+    volumes:
+      - ./ssl/postgres/root.crt:/certs/postgres/root.crt:ro
+      - ./ssl/redis/root.crt:/certs/redis/root.crt:ro
+      - ./ssl/ca-bundle.crt:/certs/ca-bundle.crt:ro
+    environment:
+      DB_POSTGRESDB_SSL_ENABLED: "true"
+      DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED: "true"
+      QUEUE_BULL_REDIS_TLS: "true"
+      NODE_EXTRA_CA_CERTS: /certs/ca-bundle.crt

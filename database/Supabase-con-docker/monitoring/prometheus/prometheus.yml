@@ -1,0 +1,120 @@
+# Configuración de Prometheus para Supabase Docker
+# Autor: Supabase Docker Project
+# Fecha: $(date)
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'supabase-docker'
+    environment: 'development'
+
+rule_files:
+  - "rules/*.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    scrape_interval: 5s
+    metrics_path: /metrics
+
+  # Supabase PostgreSQL
+  - job_name: 'supabase-postgresql'
+    static_configs:
+      - targets: ['db:5432']
+    scrape_interval: 30s
+    metrics_path: /metrics
+    params:
+      format: ['prometheus']
+
+  # Supabase Storage
+  - job_name: 'supabase-storage'
+    static_configs:
+      - targets: ['storage:5000']
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  # Supabase Auth
+  - job_name: 'supabase-auth'
+    static_configs:
+      - targets: ['auth:9999']
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  # Supabase Realtime
+  - job_name: 'supabase-realtime'
+    static_configs:
+      - targets: ['realtime:4000']
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  # Supabase Functions
+  - job_name: 'supabase-functions'
+    static_configs:
+      - targets: ['functions:9000']
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  # Kong API Gateway
+  - job_name: 'kong-gateway'
+    static_configs:
+      - targets: ['kong:8001']
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  # Supabase Studio
+  - job_name: 'supabase-studio'
+    static_configs:
+      - targets: ['studio:3000']
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  # Docker containers
+  - job_name: 'docker-containers'
+    static_configs:
+      - targets: ['host.docker.internal:9323']
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  # Node exporter (if available)
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  # cAdvisor (if available)
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+# Configuración de almacenamiento
+storage:
+  tsdb:
+    retention.time: 15d
+    retention.size: 10GB
+    wal-compression: true
+
+# Configuración de remote write (opcional)
+# remote_write:
+#   - url: "https://your-remote-storage.com/api/v1/write"
+#     basic_auth:
+#       username: "your-username"
+#       password: "your-password"
+
+# Configuración de remote read (opcional)
+# remote_read:
+#   - url: "https://your-remote-storage.com/api/v1/read"
+#     basic_auth:
+#       username: "your-username"
+#       password: "your-password"

@@ -1,0 +1,205 @@
+groups:
+  - name: s3-gateway
+    interval: 30s
+    rules:
+      - alert: S3GatewayHighErrorRate
+        expr: |
+          sum(rate(s3_gateway_errors_total[5m]))
+            / clamp_min(sum(rate(s3_gateway_requests_total[5m])), 1) > 0.05
+        for: 10m
+        labels:
+          severity: critical
+          service: s3-gateway
+        annotations:
+          summary: "S3 gateway error rate is above 5%"
+          description: "The S3 gateway has returned errors for more than 10 minutes."
+
+      - alert: S3GatewayHighLatency
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le) (rate(s3_gateway_request_duration_seconds_bucket[5m]))) > 2
+        for: 10m
+        labels:
+          severity: warning
+          service: s3-gateway
+        annotations:
+          summary: "S3 gateway p95 latency is above 2 seconds"
+          description: "Investigate R2 latency, file-service authorization and network saturation."
+
+      - alert: S3GatewayDown
+        expr: up{job="s3-gateway"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: s3-gateway
+        annotations:
+          summary: "S3 gateway metrics endpoint is unavailable"
+          description: "Prometheus cannot scrape s3-gateway on port 4002."
+
+  - name: file-service-ingestion
+    interval: 30s
+    rules:
+      - alert: FileServiceDown
+        expr: up{job="file-service"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: file-service
+        annotations:
+          summary: "file-service metrics endpoint is unavailable"
+          description: "Prometheus cannot scrape the file-service ingestion metrics endpoint."
+
+      - alert: FileIngestionHighFailureRate
+        expr: |
+          sum(rate(file_ingestion_failures_total[5m]))
+            / clamp_min(sum(rate(file_ingestion_completed_total[5m])) + sum(rate(file_ingestion_failures_total[5m])), 1) > 0.05
+        for: 10m
+        labels:
+          severity: critical
+          service: file-service
+        annotations:
+          summary: "file ingestion failure rate is above 5%"
+          description: "Investigate extraction, OpenRouter, Qdrant and PostgreSQL errors."
+
+      - alert: FileIngestionDeadLettered
+        expr: increase(file_ingestion_failures_total{dead_letter="true"}[15m]) > 0
+        for: 5m
+        labels:
+          severity: critical
+          service: file-service
+        annotations:
+          summary: "file ingestion messages reached the DLQ"
+          description: "Dead-lettered ingestion requires replay or manual remediation."
+
+      - alert: FileIngestionProvider429
+        expr: increase(embedding_provider_retries_total{status="429"}[10m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          service: file-service
+        annotations:
+          summary: "OpenRouter is rate limiting embedding requests"
+          description: "Reduce concurrency or verify provider quotas."
+
+      - alert: FileIngestionProviderLatencyHigh
+        expr: histogram_quantile(0.95, sum by (le) (rate(embedding_provider_request_duration_seconds_bucket[5m]))) > 10
+        for: 10m
+        labels:
+          severity: warning
+          service: file-service
+        annotations:
+          summary: "embedding provider p95 latency is above 10 seconds"
+          description: "Check OpenRouter health, batching and request timeouts."
+
+      - alert: FileIngestionPendingJobsHigh
+        expr: file_ingestion_jobs{status="pending"} > 100
+        for: 10m
+        labels:
+          severity: warning
+          service: file-service
+        annotations:
+          summary: "file ingestion backlog is growing"
+          description: "Pending jobs are above the operational threshold; backpressure may be active."
+
+      - alert: FileIngestionJetStreamBacklog
+        expr: gnatsd_consumerz_num_pending{consumer=~"file-.*"} > 100
+        for: 10m
+        labels:
+          severity: warning
+          service: file-service
+        annotations:
+          summary: "file-service JetStream consumer backlog is high"
+          description: "The consumer is not draining ingestion/deletion events quickly enough."
+
+      - alert: FileIngestionBackpressure
+        expr: increase(file_ingestion_backpressure_total[10m]) > 20
+        for: 10m
+        labels:
+          severity: warning
+          service: file-service
+        annotations:
+          summary: "ingestion backpressure is frequent"
+          description: "Plan limits or worker concurrency are rejecting ingestion reservations."
+
+      - alert: FileIngestionQuotaRejections
+        expr: sum(rate(file_ingestion_quota_rejections_total[10m])) > 0
+        for: 10m
+        labels:
+          severity: warning
+          service: file-service
+        annotations:
+          summary: "ingestion requests are being rejected by quota"
+          description: "Users are reaching plan limits; verify plan configuration and communicate remaining capacity."
+
+      - alert: FileIngestionAnomalousUserUsage
+        expr: |
+          sum by (user_hash) (increase(embedding_tokens_avoided_total[1h]) + increase(embedding_cost_micros_total[1h])) > 1000000000
+        for: 15m
+        labels:
+          severity: warning
+          service: file-service
+        annotations:
+          summary: "anomalous embedding usage detected for a pseudonymous user"
+          description: "The hashed user label exceeded the hourly operational threshold; review quota and abuse signals without exposing user PII."
+
+      - alert: FileAuditPipelineUnavailable
+        expr: increase(file_audit_events_total[10m]) == 0 and (rate(file_ingestion_completed_total[10m]) + rate(file_vector_search_total[10m])) > 0
+        for: 10m
+        labels:
+          severity: critical
+          service: file-service
+        annotations:
+          summary: "file audit events stopped while traffic is active"
+          description: "Successful file or vector operations are present but the audit metric is not advancing; inspect PostgreSQL audit writes."
+
+      - alert: FileIngestionLeaseFailures
+        expr: increase(canonical_embedding_lease_expired_total[15m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+          service: file-service
+        annotations:
+          summary: "canonical embedding maintenance is failing"
+          description: "Expired leases or Qdrant/PostgreSQL recovery work may be required."
+
+      - alert: FileIngestionCrossUserAttempt
+        expr: increase(qdrant_cross_user_attempts_total[10m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+          service: file-service
+        annotations:
+          summary: "cross-user Qdrant access attempt detected"
+          description: "A response or mutation violated the mandatory user ownership boundary."
+
+      - alert: FileIngestionQdrantDefensiveDiscard
+        expr: increase(qdrant_defensive_discards_total[10m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+          service: file-service
+        annotations:
+          summary: "Qdrant returned a malformed or unauthorized point"
+          description: "The point was discarded after the defensive PostgreSQL/owner validation."
+
+      - alert: FileIngestionQdrantOrphans
+        expr: canonical_embedding_orphans > 0
+        for: 15m
+        labels:
+          severity: warning
+          service: file-service
+        annotations:
+          summary: "canonical embedding vectors are orphaned"
+          description: "Vectors with no references should be drained by canonical maintenance."
+
+      - alert: FileIngestionCacheHitRatioLow
+        expr: |
+          sum(rate(embedding_cache_hits_total[15m]))
+            / clamp_min(sum(rate(embedding_cache_hits_total[15m])) + sum(rate(embedding_cache_misses_total[15m])), 1) < 0.20
+        for: 30m
+        labels:
+          severity: info
+          service: file-service
+        annotations:
+          summary: "embedding cache hit ratio is below 20%"
+          description: "Review chunk strategy, content normalization and reindex behavior."

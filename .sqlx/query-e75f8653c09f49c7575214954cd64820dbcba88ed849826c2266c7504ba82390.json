@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE plans SET name=$2,slug=$3,requests_per_minute=$4,tokens_per_minute=$5,max_concurrent_requests=$6,monthly_token_quota=$7,price_multiplier=$8,billing_mode=$9,features=$10,is_active=$11 WHERE id=$1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Varchar",
+        "Varchar",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Int8",
+        "Numeric",
+        "Varchar",
+        "Jsonb",
+        "Bool"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e75f8653c09f49c7575214954cd64820dbcba88ed849826c2266c7504ba82390"
+}

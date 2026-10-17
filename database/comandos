@@ -1,0 +1,79 @@
+cd vault
+docker compose -f docker-compose.vault.yml up -d --build
+
+docker compose --env-file ../.env -f docker-compose.vault.yml up -d
+
+docker exec -it vault vault operator init -key-shares=1 -key-threshold=1
+
+///////////nos dara algo asi ///////////
+
+➜  vault docker exec -it vault vault operator init -key-shares=1 -key-threshold=1
+Unseal Key 1: zxSf7+GLEo1S7nqQYGJJXtaJK34MZkXzbSJ6rDejqt8=
+
+Initial Root Token: hvs.xeY4CRJlHPPWshKWXwIn3JSR
+
+Vault initialized with 1 key shares and a key threshold of 1. Please securely
+distribute the key shares printed above. When the Vault is re-sealed,
+restarted, or stopped, you must supply at least 1 of these keys to unseal it
+before it can start servicing requests.
+
+Vault does not store the generated root key. Without at least 1 keys to
+reconstruct the root key, Vault will remain permanently sealed!
+
+It is possible to generate new unseal keys, provided you have a quorum of
+existing unseal keys shares. See "vault operator rekey" for more information.
+➜  vault 
+
+y lo pegamos n el .env
+
+VAULT_UNSEAL_KEY=zxSf7+GLEo1S7nqQYGJJXtaJK34MZkXzbSJ6rDejqt8=
+
+///////////////////// //////////////////////
+
+docker restart vault
+
+docker compose --env-file ../.env -f docker-compose.vault.yml up -d
+
+docker logs vault -f
+
+docker exec -it vault vault login hvs.xeY4CRJlHPPWshKWXwIn3JSR
+
+
+ database docker exec -it vault vault login hvs.xeY4CRJlHPPWshKWXwIn3JSR
+
+Success! You are now authenticated. The token information displayed below
+is already stored in the token helper. You do NOT need to run "vault login"
+again. Future Vault requests will automatically use this token.
+
+Key                  Value
+---                  -----
+token                hvs.xeY4CRJlHPPWshKWXwIn3JSR
+token_accessor       wCXMyOsPiRJw9REZnNqfeI9R
+token_duration       ∞
+token_renewable      false
+token_policies       ["root"]
+identity_policies    []
+policies             ["root"]
+➜  database 
+
+
+
+sudo apt install -y gpg wget
+
+wget -O- https://apt.releases.hashicorp.com/gpg | \
+sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(grep -oP '(?<=UBUNTU_CODENAME=).*' /etc/os-release || lsb_release -cs) main" | \
+sudo tee /etc/apt/sources.list.d/hashicorp.list
+
+sudo apt update
+sudo apt install -y vault
+
+export VAULT_ADDR="http://127.0.0.1:8500" 
+
+vault login hvs.xeY4CRJlHPPWshKWXwIn3JSR
+
+vault secrets enable -path=secret kv-v2
+
+
+vault kv put secret/api-stack user=KevinsVega password=Kevins16125219942026 url=http://localhost:3306 dbname=mydatabase

@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO wallets (user_id,currency,low_balance_threshold) VALUES ($1,$2,$3) ON CONFLICT (user_id) DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Bpchar",
+        "Numeric"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b2cd7d428130d6bbb81f30fcdc4ee3ee042838f5776c09444946842fde773988"
+}

@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE invoices SET pdf_url=$2 WHERE id=$1 AND pdf_url IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "ea732864e5d22f218f7304d503fc57ccce1f1b5af74c8fcba441205a0a7de46e"
+}

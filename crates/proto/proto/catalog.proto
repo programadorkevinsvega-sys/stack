@@ -1,0 +1,313 @@
+syntax = "proto3";
+
+package ai_gateway.catalog.v1;
+
+service CatalogService {
+    rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+
+    rpc ListModels(ListModelsRequest) returns (ListModelsResponse);
+    rpc GetModel(GetModelRequest) returns (GetModelResponse);
+    rpc GetModelByPublicName(GetModelByPublicNameRequest) returns (GetModelByPublicNameResponse);
+
+    rpc ListProviders(ListProvidersRequest) returns (ListProvidersResponse);
+
+    rpc GetCurrentPricing(GetCurrentPricingRequest) returns (GetCurrentPricingResponse);
+    rpc GetPricingAt(GetPricingAtRequest) returns (GetPricingAtResponse);
+    rpc ListPricingHistory(ListPricingHistoryRequest) returns (ListPricingHistoryResponse);
+
+    rpc RegisterModelProvider(RegisterModelProviderRequest) returns (RegisterModelProviderResponse);
+    rpc RegisterModel(RegisterModelRequest) returns (RegisterModelResponse);
+    rpc UpdateModelCapabilities(UpdateModelCapabilitiesRequest) returns (UpdateModelCapabilitiesResponse);
+    rpc UpsertModelMetadata(UpsertModelMetadataRequest) returns (UpsertModelMetadataResponse);
+    rpc GetModelMetadata(GetModelMetadataRequest) returns (GetModelMetadataResponse);
+    rpc SetProviderPolicy(SetProviderPolicyRequest) returns (SetProviderPolicyResponse);
+    rpc GetProviderPolicy(GetProviderPolicyRequest) returns (GetProviderPolicyResponse);
+    rpc DeprecateModel(DeprecateModelRequest) returns (DeprecateModelResponse);
+    rpc SetModelPricing(SetModelPricingRequest) returns (SetModelPricingResponse);
+}
+
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+    bool ok = 1;
+    string status = 2;
+}
+
+message Model {
+    string id = 1;
+    string provider_id = 2;
+    string public_model_name = 3;
+    string provider_model_id = 4;
+    optional string family = 5;
+    int32 context_window = 6;
+    int32 max_output_tokens = 7;
+    bool supports_streaming = 8;
+    bool supports_tools = 9;
+    bool supports_vision = 10;
+    bool is_active = 11;
+    optional string deprecated_at = 12;
+    string created_at = 13;
+}
+
+message Provider {
+    string id = 1;
+    string name = 2;
+    bool is_active = 3;
+    optional string contact_email = 4;
+}
+
+message ModelPricing {
+    string id = 1;
+    string model_catalog_id = 2;
+    string aws_cost_per_1k_input = 3;
+    string aws_cost_per_1k_output = 4;
+    string price_per_1k_input = 5;
+    string price_per_1k_output = 6;
+    string effective_from = 7;
+    optional string effective_to = 8;
+    optional string created_by_admin_id = 9;
+}
+
+message ListModelsRequest {
+    optional string plan_id = 1;
+    optional string provider_id = 2;
+    optional string family = 3;
+    optional bool active = 4;
+    optional uint32 limit = 5;
+    // Deprecated: use after_cursor instead
+    optional uint32 offset = 6;
+    // Keyset pagination: opaque cursor from previous ListModelsResponse.next_cursor.
+    // First page: omit this field.
+    optional string after_cursor = 7;
+}
+
+message ListModelsResponse {
+    repeated Model models = 1;
+    // Opaque cursor for the next page. Empty if there are no more results.
+    string next_cursor = 2;
+}
+
+message GetModelRequest {
+    string model_id = 1;
+    optional string plan_id = 2;
+}
+
+message GetModelResponse {
+    Model model = 1;
+}
+
+message GetModelByPublicNameRequest {
+    string public_model_name = 1;
+    optional string plan_id = 2;
+}
+
+message GetModelByPublicNameResponse {
+    Model model = 1;
+}
+
+message ListProvidersRequest {}
+
+message ListProvidersResponse {
+    repeated Provider providers = 1;
+}
+
+message GetCurrentPricingRequest {
+    string model_catalog_id = 1;
+    optional string plan_id = 2;
+}
+
+message GetCurrentPricingResponse {
+    ModelPricing pricing = 1;
+}
+
+message GetPricingAtRequest {
+    string model_catalog_id = 1;
+    string timestamp = 2; // RFC3339 UTC
+    optional string plan_id = 3;
+}
+
+message GetPricingAtResponse {
+    ModelPricing pricing = 1;
+}
+
+message ListPricingHistoryRequest {
+    string model_catalog_id = 1;
+    optional string plan_id = 2;
+}
+
+message ListPricingHistoryResponse {
+    repeated ModelPricing pricing = 1;
+}
+
+message RegisterModelProviderRequest {
+    string name = 1;
+    string admin_actor_id = 2;
+    optional string client_ip = 3;
+}
+
+message RegisterModelProviderResponse {
+    Provider provider = 1;
+}
+
+message RegisterModelRequest {
+    string provider_id = 1;
+    string public_model_name = 2;
+    string provider_model_id = 3;
+    optional string family = 4;
+    int32 context_window = 5;
+    int32 max_output_tokens = 6;
+    bool supports_streaming = 7;
+    bool supports_tools = 8;
+    bool supports_vision = 9;
+    string admin_actor_id = 10;
+    optional string client_ip = 11;
+}
+
+message RegisterModelResponse {
+    Model model = 1;
+}
+
+message UpdateModelCapabilitiesRequest {
+    string model_id = 1;
+    optional bool supports_streaming = 2;
+    optional bool supports_tools = 3;
+    optional bool supports_vision = 4;
+    string admin_actor_id = 5;
+    optional string client_ip = 6;
+    optional string provider_model_id = 7;
+}
+
+message UpdateModelCapabilitiesResponse {
+    Model model = 1;
+}
+
+message UpsertModelMetadataRequest {
+    string model_catalog_id = 1;
+    optional string description = 2;
+    optional string architecture = 3;
+    optional int64 parameter_count = 4;
+    optional string precision = 5;
+    optional string quantization = 6;
+    string metadata_json = 7;
+    optional string source_url = 8;
+    optional string source_name = 9;
+    optional string source_updated_at = 10;
+    int32 metadata_version = 11;
+    string admin_actor_id = 12;
+    optional string client_ip = 13;
+    optional string serving_provider_id = 14;
+}
+
+message ModelMetadata {
+    string id = 1;
+    string model_catalog_id = 2;
+    optional string description = 3;
+    optional string architecture = 4;
+    optional int64 parameter_count = 5;
+    optional string precision = 6;
+    optional string quantization = 7;
+    string metadata_json = 8;
+    optional string source_url = 9;
+    optional string source_name = 10;
+    optional string source_updated_at = 11;
+    int32 metadata_version = 12;
+    string created_at = 13;
+    string updated_at = 14;
+    optional string serving_provider_id = 15;
+}
+
+message UpsertModelMetadataResponse {
+    ModelMetadata metadata = 1;
+}
+
+message GetModelMetadataRequest {
+    string model_catalog_id = 1;
+}
+
+message GetModelMetadataResponse {
+    ModelMetadata metadata = 1;
+}
+
+message SetProviderPolicyRequest {
+    string provider_id = 1;
+    optional string model_catalog_id = 2;
+    string retention_mode = 3;
+    optional int32 retention_days = 4;
+    string training_usage = 5;
+    string provider_access = 6;
+    string supported_retention_modes_json = 7;
+    string data_residency_json = 8;
+    string security_controls_json = 9;
+    string compliance_json = 10;
+    string limitations_json = 11;
+    optional string privacy_policy_url = 12;
+    optional string terms_url = 13;
+    optional string documentation_url = 14;
+    optional string source_url = 15;
+    string policy_version = 16;
+    string admin_actor_id = 17;
+    optional string client_ip = 18;
+}
+
+message ProviderPolicy {
+    string id = 1;
+    string provider_id = 2;
+    optional string model_catalog_id = 3;
+    string policy_scope = 4;
+    string retention_mode = 5;
+    optional int32 retention_days = 6;
+    string training_usage = 7;
+    string provider_access = 8;
+    string supported_retention_modes_json = 9;
+    string data_residency_json = 10;
+    string security_controls_json = 11;
+    string compliance_json = 12;
+    string limitations_json = 13;
+    optional string privacy_policy_url = 14;
+    optional string terms_url = 15;
+    optional string documentation_url = 16;
+    optional string source_url = 17;
+    string policy_version = 18;
+    string effective_from = 19;
+    optional string effective_to = 20;
+    bool is_current = 21;
+    optional string created_by_admin_id = 22;
+    string created_at = 23;
+}
+
+message SetProviderPolicyResponse {
+    ProviderPolicy policy = 1;
+}
+
+message GetProviderPolicyRequest {
+    string provider_id = 1;
+    optional string model_catalog_id = 2;
+}
+
+message GetProviderPolicyResponse {
+    ProviderPolicy policy = 1;
+}
+
+message DeprecateModelRequest {
+    string model_id = 1;
+    string admin_actor_id = 2;
+    optional string client_ip = 3;
+}
+
+message DeprecateModelResponse {
+    bool success = 1;
+}
+
+message SetModelPricingRequest {
+    string model_catalog_id = 1;
+    string aws_cost_per_1k_input = 2;
+    string aws_cost_per_1k_output = 3;
+    string price_per_1k_input = 4;
+    string price_per_1k_output = 5;
+    string admin_actor_id = 6;
+    optional string client_ip = 7;
+}
+
+message SetModelPricingResponse {
+    ModelPricing pricing = 1;
+}

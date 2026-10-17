@@ -1,0 +1,127 @@
+syntax = "proto3";
+
+package ai_gateway.usage.v1;
+
+service UsageReportingService {
+  rpc GetUsageByUser(UsageByUserRequest) returns (UsageSummaryResponse);
+  rpc GetUsageByApiKey(UsageByApiKeyRequest) returns (UsageSummaryResponse);
+  rpc GetUsageByModel(UsageByModelRequest) returns (UsageSummaryResponse);
+  rpc GetCurrentMonthUsage(CurrentMonthUsageRequest) returns (UsageSummaryResponse);
+  rpc GetTopModels(TopModelsRequest) returns (TopModelsResponse);
+  rpc GetTopModelsByUser(TopModelsByUserRequest) returns (TopModelsResponse);
+  rpc GetErrorRate(ErrorRateRequest) returns (ErrorRateResponse);
+  rpc GetLatencyStats(LatencyStatsRequest) returns (LatencyStatsResponse);
+  rpc GetLatencyStatsByUser(LatencyStatsByUserRequest) returns (LatencyStatsResponse);
+  rpc RefreshMaterializedViews(RefreshMaterializedViewsRequest) returns (RefreshMaterializedViewsResponse);
+  rpc CreateNextMonthPartition(CreateNextMonthPartitionRequest) returns (CreateNextMonthPartitionResponse);
+}
+
+message TimeRange {
+  string start = 1;
+  string end = 2;
+}
+
+message UsageSummary {
+  int64 total_requests = 1;
+  int64 total_input_tokens = 2;
+  int64 total_output_tokens = 3;
+  int64 total_cached_tokens = 4;
+  int64 error_count = 5;
+  double error_rate = 6;
+  double avg_latency_ms = 7;
+}
+
+message UsageSummaryResponse {
+  UsageSummary summary = 1;
+}
+
+message UsageByUserRequest {
+  string user_id = 1;
+  TimeRange range = 2;
+}
+
+message UsageByApiKeyRequest {
+  string api_key_id = 1;
+  TimeRange range = 2;
+}
+
+message UsageByModelRequest {
+  string model_catalog_id = 1;
+  TimeRange range = 2;
+}
+
+message CurrentMonthUsageRequest {
+  string user_id = 1;
+}
+
+message TopModelsRequest {
+  TimeRange range = 1;
+  int32 limit = 2;
+}
+
+message TopModelsByUserRequest {
+  string user_id = 1;
+  TimeRange range = 2;
+  int32 limit = 3;
+}
+
+message TopModel {
+  string model_catalog_id = 1;
+  int64 total_requests = 2;
+  int64 total_input_tokens = 3;
+  int64 total_output_tokens = 4;
+  double avg_latency_ms = 5;
+  int64 error_count = 6;
+}
+
+message TopModelsResponse {
+  repeated TopModel models = 1;
+}
+
+message ErrorRateRequest {
+  TimeRange range = 1;
+}
+
+message ErrorBucket {
+  string error_code = 1;
+  int64 count = 2;
+}
+
+message ErrorRateResponse {
+  int64 total_requests = 1;
+  int64 error_count = 2;
+  double error_rate = 3;
+  repeated ErrorBucket buckets = 4;
+}
+
+message LatencyStatsRequest {
+  TimeRange range = 1;
+}
+
+message LatencyStatsByUserRequest {
+  string user_id = 1;
+  TimeRange range = 2;
+}
+
+message LatencyStatsResponse {
+  int64 sample_count = 1;
+  double min_latency_ms = 2;
+  double avg_latency_ms = 3;
+  double p50_latency_ms = 4;
+  double p95_latency_ms = 5;
+  double p99_latency_ms = 6;
+  double max_latency_ms = 7;
+}
+
+message RefreshMaterializedViewsRequest {}
+
+message RefreshMaterializedViewsResponse {
+  bool refreshed = 1;
+}
+
+message CreateNextMonthPartitionRequest {}
+
+message CreateNextMonthPartitionResponse {
+  string partition_name = 1;
+  bool created_or_verified = 2;
+}

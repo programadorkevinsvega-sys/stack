@@ -1,0 +1,143 @@
+# Pipeline de Docker Build para Supabase Docker
+# Autor: Supabase Docker Project
+# Fecha: $(date)
+
+name: Docker Build Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'supabase-docker/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'supabase-docker/**'
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/supabase-docker
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./supabase-docker
+        platforms: linux/amd64,linux/arm64
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+  test:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build test image
+      run: |
+        cd supabase-docker
+        docker build -t supabase-docker:test .
+
+    - name: Test Supabase services
+      run: |
+        cd supabase-docker
+        docker-compose up -d
+        sleep 30
+        
+        # Test Supabase Studio
+        curl -f http://localhost:3000 || exit 1
+        
+        # Test API Gateway
+        curl -f http://localhost:8000/health || exit 1
+        
+        # Test PostgreSQL
+        docker exec supabase-db pg_isready -U postgres || exit 1
+        
+        # Test Storage
+        curl -f http://localhost:5000/health || exit 1
+        
+        # Test Auth
+        curl -f http://localhost:9999/health || exit 1
+        
+        # Test Realtime
+        curl -f http://localhost:4000/health || exit 1
+
+    - name: Cleanup
+      if: always()
+      run: |
+        cd supabase-docker
+        docker-compose down -v
+
+  security:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [build, test, security]
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Deploy to production
+      run: |
+        echo "Deploying to production..."
+        # Add your deployment commands here
+        # Example: kubectl apply -f k8s/
+        # Example: docker-compose -f docker-compose.prod.yml up -d

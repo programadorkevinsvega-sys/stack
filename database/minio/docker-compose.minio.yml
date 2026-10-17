@@ -1,0 +1,94 @@
+# 🗄️ SERVICIOS EXTERNOS PARA n8n
+# ================================
+# Este docker-compose.minio.yml levanta el servicio EXTERNO que n8n necesita:
+# - MinIO: Almacenamiento de objetos compatible con S3 (para archivos y backups)
+#
+# Estos servicios son COMPARTIDOS por:
+# - PC Local (docker-compose.yml)
+# - VPS Remoto (vps/docker-compose.vps.yml)
+#
+# ⚠️ IMPORTANTE: Levanta ESTO PRIMERO, antes de levantarn8n en PC o VPS
+
+services:
+
+  # ================================
+  # 🪣 MinIO - Almacenamiento S3
+  # ================================
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    restart: always # Reinicia SIEMPRE, incluso después de reboot
+
+    # Comando para iniciar MinIO
+    command: server /data --console-address ":9001" --address ":9000"
+
+    # Variables de entorno
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-KevinsAdmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-Kevins1612522026}
+      # IMPORTANTE para Cloudflare, confía en los headers de proxy para IP real y protocolo
+      TZ: ${TZ:-America/Bogota}
+      GENERIC_TIMEZONE: ${GENERIC_TIMEZONE:-America/Bogota}
+      # SSL/TLS Configuration (MinIO uses certs from /etc/minio/certs/ if present)
+      MINIO_ENABLE_SSL: ${MINIO_ENABLE_SSL:-false}
+      # Browser and API URLs
+      MINIO_BROWSER_REDIRECT_URL: https://minio.internalverterservices.net
+      MINIO_SERVER_URL: https://minio.internalverterservices.net
+    # Datos persistentes (en carpeta ./volumes/)
+    volumes:
+      - minio_data:/data
+      - ./ssl/generales:/etc/minio/certs:ro
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+
+    # Puertos
+    # 9000: MinIO API S3 (HTTP)
+    # 9001: MinIO Console (Web UI HTTP)
+    # 9443: MinIO API S3 (HTTPS)
+    # 9444: MinIO Console (Web UI HTTPS)
+    ports:
+      - "127.0.0.1:9010:9000"
+      - "127.0.0.1:9011:9001"
+      - "100.121.34.76:9003:9000"
+      - "100.121.34.76:9004:9001"
+      - "127.0.0.1:9413:9443"
+      - "127.0.0.1:9414:9444"
+      - "100.121.34.76:9413:9443"
+      - "100.121.34.76:9414:9444"
+
+    # Healthcheck
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://127.0.0.1:9000/minio/health/live" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+    # Red
+    networks:
+      - stack-network
+
+    # Logs
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    # Limites de recursos (16GB total: MinIO 2GB)
+    deploy:
+      resources:
+        limits:
+          memory: 10G
+        reservations:
+          memory: 512M
+
+# ================================
+# 🌐 RED COMPARTIDA
+# ================================
+networks:
+  stack-network:
+    name: stack-network
+    driver: bridge
+
+volumes:
+  minio_data:

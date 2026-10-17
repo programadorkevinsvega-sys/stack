@@ -1,0 +1,186 @@
+# PostgreSQL + PgBouncer para n8n
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: postgres
+    restart: always
+    command:
+      - postgres
+      - -c
+      - max_connections=${POSTGRES_MAX_CONNECTIONS:-1000}
+      - -c
+      - superuser_reserved_connections=${POSTGRES_SUPERUSER_RESERVED_CONNECTIONS:-20}
+      - -c
+      - shared_buffers=${POSTGRES_SHARED_BUFFERS:-3GB}
+      - -c
+      - effective_cache_size=${POSTGRES_EFFECTIVE_CACHE_SIZE:-9GB}
+      - -c
+      - work_mem=${POSTGRES_WORK_MEM:-30MB}
+      - -c
+      - maintenance_work_mem=${POSTGRES_MAINTENANCE_WORK_MEM:-512MB}
+      - -c
+      - wal_buffers=${POSTGRES_WAL_BUFFERS:-32MB}
+      - -c
+      - min_wal_size=${POSTGRES_MIN_WAL_SIZE:-512MB}
+      - -c
+      - max_wal_size=${POSTGRES_MAX_WAL_SIZE:-4GB}
+      - -c
+      - idle_in_transaction_session_timeout=${POSTGRES_IDLE_IN_TRANSACTION_SESSION_TIMEOUT:-60000}
+      - -c
+      - statement_timeout=${POSTGRES_STATEMENT_TIMEOUT:-300000}
+      - -c
+      - random_page_cost=${POSTGRES_RANDOM_PAGE_COST:-1.1}
+      - -c
+      - synchronous_commit=${POSTGRES_SYNCHRONOUS_COMMIT:-local}
+      - -c
+      - log_connections=${POSTGRES_LOG_CONNECTIONS:-on}
+      - -c
+      - log_disconnections=${POSTGRES_LOG_DISCONNECTIONS:-on}
+      - -c
+      - log_lock_waits=${POSTGRES_LOG_LOCK_WAITS:-on}
+      - -c
+      - shared_preload_libraries=pg_stat_statements
+      - -c
+      - pg_stat_statements.max=10000
+      - -c
+      - pg_stat_statements.track=all
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-Kevins1612522026}
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+      POSTGRES_INITDB_ARGS: ${POSTGRES_INITDB_ARGS:---encoding=UTF8}
+      POSTGRES_INITDB_WALDIR: ${POSTGRES_INITDB_WALDIR:-/var/lib/postgresql/wal}
+      TZ: ${TZ:-America/Bogota}
+      GENERIC_TIMEZONE: ${GENERIC_TIMEZONE:-America/Bogota}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - postgres_wal:/var/lib/postgresql/wal
+    ports:
+      - "100.121.34.76:5432:5432"
+      - "127.0.0.1:5432:5432"
+    shm_size: ${POSTGRES_SHM_SIZE:-1gb}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - stack-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          memory: 10G
+        reservations:
+          memory: 2G
+
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    container_name: pgbouncer
+    restart: always
+    depends_on:
+      - postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-Kevins1612522026}
+      DB_HOST: ${DB_HOST:-postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-Kevins1612522026}
+    command:
+      - /bin/sh
+      - -ec
+      - |
+        cat >/etc/pgbouncer/pgbouncer.ini <<EOF
+        [databases]
+        * = host=postgres port=5432
+
+        [pgbouncer]
+        listen_addr = 0.0.0.0
+        listen_port = 6432
+        auth_type = plain
+        auth_file = /etc/pgbouncer/userlist.txt
+        admin_users = ${POSTGRES_USER:-postgres}
+        stats_users = ${POSTGRES_USER:-postgres}
+        pool_mode = ${PGBOUNCER_POOL_MODE:-session}
+        max_client_conn = ${PGBOUNCER_MAX_CLIENT_CONN:-4000}
+        default_pool_size = ${PGBOUNCER_DEFAULT_POOL_SIZE:-50}
+        min_pool_size = ${PGBOUNCER_MIN_POOL_SIZE:-10}
+        reserve_pool_size = ${PGBOUNCER_RESERVE_POOL_SIZE:-20}
+        reserve_pool_timeout = ${PGBOUNCER_RESERVE_POOL_TIMEOUT:-5}
+        max_db_connections = ${PGBOUNCER_MAX_DB_CONNECTIONS:-200}
+        max_user_connections = ${PGBOUNCER_MAX_USER_CONNECTIONS:-200}
+        server_reset_query = DISCARD ALL
+        server_check_query = select 1
+        server_check_delay = 30
+        ignore_startup_parameters = extra_float_digits,search_path,options
+        log_connections = 1
+        log_disconnections = 1
+        EOF
+        printf '"%s" "%s"\n' "${POSTGRES_USER:-postgres}" "${POSTGRES_PASSWORD:-Kevins1612522026}" >/etc/pgbouncer/userlist.txt
+        exec pgbouncer /etc/pgbouncer/pgbouncer.ini
+    ports:
+      - "100.121.34.76:6432:6432"
+      - "127.0.0.1:6432:6432"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 6432"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - stack-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 128M
+
+  pgadmin:
+    image: dpage/pgadmin4:9.16
+    container_name: pgadmin
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-programadorkevinsvega@gmail.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-Kevins1612522026}
+      PGADMIN_CONFIG_PROXY_X_FOR_COUNT: 1
+      PGADMIN_CONFIG_PROXY_X_PROTO_COUNT: 1
+      PGADMIN_CONFIG_PROXY_X_HOST_COUNT: 1
+      PGADMIN_CONFIG_ENHANCED_COOKIE_PROTECTION: 'False'
+      TZ: ${TZ:-America/Bogota}
+    ports:
+      - "100.121.34.76:5050:80"
+      - "127.0.0.1:5050:80"
+    depends_on:
+      - postgres
+    networks:
+      - stack-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 256M
+
+networks:
+  stack-network:
+    name: stack-network
+    driver: bridge
+
+volumes:
+  postgres_data:
+  postgres_wal:

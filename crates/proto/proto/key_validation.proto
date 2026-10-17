@@ -1,0 +1,66 @@
+syntax = "proto3";
+
+package ai_gateway.keys.v1;
+
+// Servicio de validación de API keys.
+// Es el endpoint más crítico en latencia del sistema — llamado en cada request.
+service KeyValidationService {
+    // Valida una API key por su hash. Cacheado agresivamente en Redis.
+    rpc ValidateKey(ValidateKeyRequest) returns (ValidateKeyResponse);
+
+    // Invalida la cache de una key revocada.
+    rpc RevokeKeyCache(RevokeKeyCacheRequest) returns (RevokeKeyCacheResponse);
+
+    // Invalidates every cached key authorization decision for a user. This is
+    // used when a subscription/plan or authorization policy changes.
+    rpc InvalidateUserKeyCache(InvalidateUserKeyCacheRequest) returns (RevokeKeyCacheResponse);
+}
+
+service KeyManagementService {
+    rpc CreateKey(CreateKeyRequest) returns (CreateKeyResponse);
+    rpc RevokeKey(RevokeKeyRequest) returns (RevokeKeyResponse);
+    rpc RotateKey(RotateKeyRequest) returns (RotateKeyResponse);
+    rpc UpdateKeyMetadata(UpdateKeyMetadataRequest) returns (UpdateKeyMetadataResponse);
+    rpc ListKeys(ListKeysRequest) returns (ListKeysResponse);
+    rpc GetKey(GetKeyRequest) returns (GetKeyResponse);
+}
+
+message ValidateKeyRequest {
+    string api_key = 1; // key plaintext received only over authenticated gRPC; key-services computes HMAC-SHA256 internally
+    optional string source_ip = 2;
+    optional string required_scope = 3;
+}
+
+message ValidateKeyResponse {
+    bool is_valid = 1;
+    string api_key_id = 2;
+    string user_id = 3;
+    string status = 4;                // active | revoked | expired
+    repeated string scopes = 5;
+    // Rate limit overrides desde la key (pueden ser más restrictivos que el plan)
+    optional int32 rate_limit_override_rpm = 6;
+    optional int32 rate_limit_override_tpm = 7;
+    optional int32 max_concurrent_requests = 8;
+    optional string expires_at = 9;   // ISO 8601
+}
+
+message RevokeKeyCacheRequest { string key_hash = 1; }
+message InvalidateUserKeyCacheRequest { string user_id = 1; }
+
+message RevokeKeyCacheResponse {
+    bool success = 1;
+}
+
+message KeyMetadata { string id = 1; string user_id = 2; string name = 3; string key_prefix = 4; repeated string scopes = 5; repeated string allowed_ips = 6; string status = 7; optional int32 rate_limit_override_rpm = 8; optional int32 rate_limit_override_tpm = 9; optional int32 max_concurrent_requests = 10; optional string expires_at = 11; optional string last_used_at = 12; optional string last_used_ip = 13; optional string revoked_at = 14; optional string revoked_reason = 15; string created_at = 16; }
+message CreateKeyRequest { string user_id = 1; string name = 2; repeated string scopes = 3; repeated string allowed_ips = 4; optional int32 rate_limit_override_rpm = 5; optional int32 rate_limit_override_tpm = 6; optional int32 max_concurrent_requests = 7; optional string expires_at = 8; }
+message CreateKeyResponse { KeyMetadata key = 1; string plaintext_api_key = 2; }
+message RevokeKeyRequest { string key_id = 1; string user_id = 2; string revoked_by = 3; string reason = 4; }
+message RevokeKeyResponse { bool success = 1; }
+message RotateKeyRequest { string key_id = 1; string user_id = 2; string revoked_by = 3; string reason = 4; repeated string scopes = 5; }
+message RotateKeyResponse { KeyMetadata key = 1; string plaintext_api_key = 2; }
+message UpdateKeyMetadataRequest { string key_id = 1; string user_id = 2; string name = 3; repeated string allowed_ips = 4; optional int32 rate_limit_override_rpm = 5; optional int32 rate_limit_override_tpm = 6; optional int32 max_concurrent_requests = 7; repeated string scopes = 8; }
+message UpdateKeyMetadataResponse { KeyMetadata key = 1; }
+message ListKeysRequest { string user_id = 1; }
+message ListKeysResponse { repeated KeyMetadata keys = 1; }
+message GetKeyRequest { string key_id = 1; string user_id = 2; }
+message GetKeyResponse { KeyMetadata key = 1; }

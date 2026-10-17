@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT c.relname AS name,\n                  pg_catalog.pg_get_expr(c.relpartbound, c.oid, true) AS range_expr\n           FROM pg_catalog.pg_inherits i\n           JOIN pg_catalog.pg_class c ON c.oid = i.inhrelid\n           JOIN pg_catalog.pg_class p ON p.oid = i.inhparent\n           WHERE p.relname = 'usage_events'\n             AND p.relnamespace = (SELECT oid FROM pg_catalog.pg_namespace WHERE nspname = 'public')\n           ORDER BY c.relname",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "name",
+        "type_info": "Name"
+      },
+      {
+        "ordinal": 1,
+        "name": "range_expr",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      null
+    ]
+  },
+  "hash": "33aed8cd792dbee6829c83398318c92e16a9b03fac685e1467482179904bb48b"
+}

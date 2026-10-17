@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE model_pricing\n            SET effective_to = now()\n            WHERE model_catalog_id = $1\n              AND effective_to IS NULL\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "8ba90abc68c64ef3757e15b5b554771dddd7392ad4cc05d9da152215e0af4cf0"
+}

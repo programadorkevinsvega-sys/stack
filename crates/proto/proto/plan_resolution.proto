@@ -1,0 +1,267 @@
+syntax = "proto3";
+
+package ai_gateway.subscription.v1;
+
+// Servicio de resolución de límites de plan.
+// Llamado por api-gateway para obtener los rate limits vigentes.
+service PlanResolutionService {
+    rpc GetPlanLimits(GetPlanLimitsRequest) returns (GetPlanLimitsResponse);
+}
+
+service SubscriptionManagementService {
+    rpc CreatePlan(CreatePlanRequest) returns (PlanResponse);
+    rpc UpdatePlan(UpdatePlanRequest) returns (PlanResponse);
+    rpc DeactivatePlan(DeactivatePlanRequest) returns (PlanResponse);
+    rpc GetPlan(GetPlanRequest) returns (PlanResponse);
+    rpc ListActivePlans(ListActivePlansRequest) returns (ListPlansResponse);
+    rpc AcceptTerms(AcceptTermsRequest) returns (AcceptTermsResponse);
+    rpc GetTermsStatus(GetTermsStatusRequest) returns (GetTermsStatusResponse);
+
+    rpc CreateSubscription(CreateSubscriptionRequest) returns (SubscriptionResponse);
+    rpc UpgradeSubscription(ChangeSubscriptionPlanRequest) returns (SubscriptionResponse);
+    rpc DowngradeSubscription(ChangeSubscriptionPlanRequest) returns (SubscriptionResponse);
+    rpc CancelSubscription(CancelSubscriptionRequest) returns (SubscriptionResponse);
+    rpc RenewSubscription(RenewSubscriptionRequest) returns (SubscriptionResponse);
+    rpc MarkSubscriptionPastDue(MarkSubscriptionPastDueRequest) returns (SubscriptionResponse);
+    rpc GetActiveSubscription(GetActiveSubscriptionRequest) returns (GetSubscriptionResponse);
+    rpc GetSubscription(GetSubscriptionRequest) returns (GetSubscriptionResponse);
+}
+
+message GetPlanLimitsRequest {
+    string user_id = 1;
+}
+
+message GetPlanLimitsResponse {
+    bool has_active_subscription = 1;
+    int32 requests_per_minute = 2;
+    int32 tokens_per_minute = 3;
+    int32 max_concurrent_requests = 4;
+    optional int64 monthly_token_quota = 5; // NULL = ilimitado (postpago)
+    string billing_mode = 6;                // "prepaid" | "postpaid"
+    string plan_id = 7;
+    string plan_name = 8;
+    int64 storage_bytes_quota = 9;
+    int64 max_file_size_bytes = 10;
+    int64 max_files = 11;
+    bool embeddings_enabled = 12;
+    bool rag_enabled = 13;
+    string qdrant_mode = 14;
+    string currency = 15;
+    string price_amount = 16;
+    int32 trial_days = 17;
+    int64 max_api_keys = 18;
+    bool overage_enabled = 19;
+    string fair_use_policy = 20;
+    int32 grace_period_days = 21;
+    bool sso_enabled = 22;
+    bool sla_enabled = 23;
+    bool mtls_enabled = 24;
+    bool s3_api_enabled = 25;
+    int64 max_ingestion_files_per_hour = 26;
+    int64 max_ingestion_files_per_day = 27;
+    int64 max_ingestion_bytes_per_day = 28;
+    int64 max_ingestion_tokens_per_month = 29;
+    int64 max_concurrent_ingestions = 30;
+    int64 max_pending_ingestion_jobs = 31;
+}
+
+message Plan {
+    string id = 1;
+    string name = 2;
+    string slug = 3;
+    int32 requests_per_minute = 4;
+    int32 tokens_per_minute = 5;
+    int32 max_concurrent_requests = 6;
+    optional int64 monthly_token_quota = 7;
+    string price_multiplier = 8;
+    string billing_mode = 9;
+    string features_json = 10;
+    bool is_active = 11;
+    string created_at = 12;
+    int64 storage_bytes_quota = 13;
+    int64 max_file_size_bytes = 14;
+    int64 max_files = 15;
+    bool embeddings_enabled = 16;
+    bool rag_enabled = 17;
+    string qdrant_mode = 18;
+    string price_amount = 19;
+    string currency = 20;
+    int32 trial_days = 21;
+    int64 max_api_keys = 22;
+    bool overage_enabled = 23;
+    string fair_use_policy = 24;
+    int32 grace_period_days = 25;
+    bool sso_enabled = 26;
+    bool sla_enabled = 27;
+    bool mtls_enabled = 28;
+    bool s3_api_enabled = 29;
+    int64 max_ingestion_files_per_hour = 30;
+    int64 max_ingestion_files_per_day = 31;
+    int64 max_ingestion_bytes_per_day = 32;
+    int64 max_ingestion_tokens_per_month = 33;
+    int64 max_concurrent_ingestions = 34;
+    int64 max_pending_ingestion_jobs = 35;
+}
+
+message Subscription {
+    string id = 1;
+    string user_id = 2;
+    string plan_id = 3;
+    string status = 4;
+    string billing_cycle = 5;
+    string current_period_start = 6;
+    string current_period_end = 7;
+    bool cancel_at_period_end = 8;
+    optional string canceled_at = 9;
+    string created_at = 10;
+    string updated_at = 11;
+    optional string trial_ends_at = 12;
+    optional string grace_period_ends_at = 13;
+    int32 payment_retry_count = 14;
+    optional string last_payment_error = 15;
+    optional string provider_subscription_id = 16;
+}
+
+message CreatePlanRequest {
+    string name = 1;
+    string slug = 2;
+    int32 requests_per_minute = 3;
+    int32 tokens_per_minute = 4;
+    int32 max_concurrent_requests = 5;
+    optional int64 monthly_token_quota = 6;
+    string price_multiplier = 7;
+    string billing_mode = 8;
+    string features_json = 9;
+    int64 storage_bytes_quota = 10;
+    int64 max_file_size_bytes = 11;
+    int64 max_files = 12;
+    bool embeddings_enabled = 13;
+    bool rag_enabled = 14;
+    string qdrant_mode = 15;
+    string price_amount = 16;
+    string currency = 17;
+    int32 trial_days = 18;
+    int64 max_api_keys = 19;
+    bool overage_enabled = 20;
+    string fair_use_policy = 21;
+    int32 grace_period_days = 22;
+    bool sso_enabled = 23;
+    bool sla_enabled = 24;
+    bool mtls_enabled = 25;
+    bool s3_api_enabled = 26;
+    int64 max_ingestion_files_per_hour = 27;
+    int64 max_ingestion_files_per_day = 28;
+    int64 max_ingestion_bytes_per_day = 29;
+    int64 max_ingestion_tokens_per_month = 30;
+    int64 max_concurrent_ingestions = 31;
+    int64 max_pending_ingestion_jobs = 32;
+}
+
+message UpdatePlanRequest {
+    string plan_id = 1;
+    string name = 2;
+    string slug = 3;
+    int32 requests_per_minute = 4;
+    int32 tokens_per_minute = 5;
+    int32 max_concurrent_requests = 6;
+    optional int64 monthly_token_quota = 7;
+    string price_multiplier = 8;
+    string billing_mode = 9;
+    string features_json = 10;
+    bool is_active = 11;
+    int64 storage_bytes_quota = 12;
+    int64 max_file_size_bytes = 13;
+    int64 max_files = 14;
+    bool embeddings_enabled = 15;
+    bool rag_enabled = 16;
+    string qdrant_mode = 17;
+    string price_amount = 18;
+    string currency = 19;
+    int32 trial_days = 20;
+    int64 max_api_keys = 21;
+    bool overage_enabled = 22;
+    string fair_use_policy = 23;
+    int32 grace_period_days = 24;
+    bool sso_enabled = 25;
+    bool sla_enabled = 26;
+    bool mtls_enabled = 27;
+    bool s3_api_enabled = 28;
+    int64 max_ingestion_files_per_hour = 29;
+    int64 max_ingestion_files_per_day = 30;
+    int64 max_ingestion_bytes_per_day = 31;
+    int64 max_ingestion_tokens_per_month = 32;
+    int64 max_concurrent_ingestions = 33;
+    int64 max_pending_ingestion_jobs = 34;
+}
+
+message DeactivatePlanRequest {
+    string plan_id = 1;
+}
+
+message GetPlanRequest {
+    string plan_id = 1;
+}
+
+message ListActivePlansRequest {}
+
+message AcceptTermsRequest {
+    string user_id = 1;
+    string terms_version = 2;
+    string privacy_version = 3;
+    string ip_address = 4;
+    string user_agent = 5;
+    string country = 6;
+}
+message AcceptTermsResponse { bool accepted = 1; string accepted_at = 2; }
+message GetTermsStatusRequest { string user_id = 1; string terms_version = 2; string privacy_version = 3; }
+message GetTermsStatusResponse { bool accepted = 1; string terms_version = 2; string privacy_version = 3; }
+
+message PlanResponse {
+    Plan plan = 1;
+}
+
+message ListPlansResponse {
+    repeated Plan plans = 1;
+}
+
+message CreateSubscriptionRequest {
+    string user_id = 1;
+    string plan_id = 2;
+    string billing_cycle = 3;
+    string terms_version = 4;
+    string privacy_version = 5;
+}
+
+message ChangeSubscriptionPlanRequest {
+    string user_id = 1;
+    string plan_id = 2;
+}
+
+message CancelSubscriptionRequest {
+    string user_id = 1;
+    bool at_period_end = 2;
+}
+
+message RenewSubscriptionRequest {
+    string user_id = 1;
+}
+
+message MarkSubscriptionPastDueRequest {
+    string subscription_id = 1;
+}
+
+message GetActiveSubscriptionRequest {
+    string user_id = 1;
+}
+
+message GetSubscriptionRequest {
+    string subscription_id = 1;
+}
+
+message SubscriptionResponse {
+    Subscription subscription = 1;
+}
+
+message GetSubscriptionResponse {
+    optional Subscription subscription = 1;
+}

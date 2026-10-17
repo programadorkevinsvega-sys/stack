@@ -1,0 +1,36 @@
+pub mod api_key;
+pub mod audit_logger;
+pub mod audit_signer;
+pub mod clock;
+pub mod config;
+pub mod config_reload;
+pub mod error;
+pub mod grpc_rate_limit;
+pub mod money;
+pub mod nats;
+pub mod observability;
+pub mod pagination;
+pub mod request_id;
+pub mod service_jwt;
+pub mod shutdown;
+pub mod ssrf;
+pub mod startup;
+pub mod tls;
+
+// Re-exports
+pub use api_key::ApiKeyPrefix;
+pub use audit_logger::{AuditEntry, PgAuditLogger};
+pub use audit_signer::AuditSigner;
+pub use clock::Clock;
+pub use config::AppConfig;
+pub use config_reload::{ConfigReloadHandle, ConfigSnapshot};
+pub use error::DomainError;
+pub use grpc_rate_limit::GrpcRateLimiter;
+pub use money::{Money, MoneyError};
+pub use nats::{connect_nats, NatsConnectionError};
+pub use pagination::{KeysetPagination, Pagination};
+pub use request_id::RequestId;
+pub use service_jwt::{csv_env, derive_kid, KeyEntry, KeyStore, ServiceJwtAuth, ServiceJwtClaims};
+pub use ssrf::SsrfError;
+pub use startup::ReloadableRedisPool;
+pub use tls::{CertificateProvider, ServiceTlsConfig, TlsError, TlsMaterial, TlsMode, TlsProvider};

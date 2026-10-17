@@ -1,0 +1,130 @@
+version: '3.8'
+
+# ========================================
+# 🌐 Traefik Reverse Proxy para n8n
+# ========================================
+# Alternativa más avanzada a nginx
+# Requiere configuración de labels en el docker-compose de n8n
+#
+# Características:
+# - Auto-descobrimiento de servicios
+# - Certificados Let's Encrypt automáticos (opcional)
+# - Dashboard de administración
+# - Balanceo de carga
+
+services:
+  traefik:
+    image: traefik:latest
+    container_name: traefik
+    restart: always
+
+    # Puertos PÚBLICOS
+    ports:
+      # HTTP público
+      - "172.16.0.1:80:80"
+      # HTTPS público (requiere certificados)
+      - "127.0.0.1:443:443"
+
+      # HTTP para Tailscale
+      - "100.121.34.76:80:80"
+      - "100.121.34.76:443:443"
+
+      # Dashboard Traefik (SOLO local)
+      - "127.0.0.1:8080:8080"
+
+    # Variables de entorno
+    environment:
+      # API Dashboard (insecure mode para desarrollo)
+      # Para producción: usar autenticación
+      TRAEFIK_API_INSECURE: "true"
+      TRAEFIK_API_DASHBOARD: "true"
+
+      # Providers
+      TRAEFIK_PROVIDERS_DOCKER: "true"
+      TRAEFIK_PROVIDERS_DOCKER_NETWORK: "proxy-network"
+
+      # Entry Points
+      TRAEFIK_ENTRYPOINTS_WEB_ADDRESS: ":80"
+      # TRAEFIK_ENTRYPOINTS_WEBSECURE_ADDRESS: ":443"
+
+      # IMPORTANTE para Cloudflare, confía en los headers de proxy para IP real y protocolo
+      TZ: ${TZ:-America/Bogota}
+      GENERIC_TIMEZONE: ${GENERIC_TIMEZONE:-America/Bogota}
+      # Volúmenes
+    volumes:
+      # Docker socket (para detectar contenedores)
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+      # (Opcional) Almacenar configuración
+      - ./traefik:/traefik
+
+      # (Opcional) Certificados Let's Encrypt
+      # - ./letsencrypt:/letsencrypt
+
+      # recomienda sincronizar hora local para evitar problemas con logs y certificados
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+
+    # Redes
+    networks:
+      # Conectado SOLO a proxy-network
+      - proxy-network
+
+    # Health Check
+    healthcheck:
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/ping" ]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+    # Logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# ========================================
+# Redes
+# ========================================
+networks:
+  # Red pública - expuesta a internet
+  proxy-network:
+    name: proxy-network
+    driver: bridge
+    external: true # LA RED YA DEBE EXISTIR
+
+# ========================================
+# Información de Configuración
+# ========================================
+
+# PARA USAR TRAEFIK, AGREGAR ESTOS LABELS A n8n-web EN n8n/local/docker-compose.yml:
+#
+# services:
+#   n8n-web:
+#     image: n8n
+#     ...
+#     networks:
+#       - stack-network
+#       - proxy-network
+#     labels:
+#       # Habilitar Traefik para este servicio
+#       - "traefik.enable=true"
+#       
+#       # Regla de enrutamiento (por Host)
+#       - "traefik.http.routers.n8n.rule=Host(`n8n.example.com`) || Host(`localhost`)"
+#       
+#       # Entry points (HTTP/HTTPS)
+#       - "traefik.http.routers.n8n.entrypoints=web"  # Cambiar a "websecure" para HTTPS
+#       
+#       # Servicio backend
+#       - "traefik.http.services.n8n.loadbalancer.server.port=5678"
+#       
+#       # (Opcional) Tags para middleware específico
+#       - "traefik.http.routers.n8n.middlewares=n8n-header"
+#
+# # (Opcional) Middleware para headers
+# labels:
+#   - "traefik.http.middlewares.n8n-header.headers.accesscontrolalloworiginlist=*"
+#   - "traefik.http.middlewares.n8n-header.headers.accesscontrolallowmethods=GET,OPTIONS,PUT,POST,DELETE"

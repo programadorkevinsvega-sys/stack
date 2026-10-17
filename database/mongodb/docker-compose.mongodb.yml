@@ -1,0 +1,127 @@
+# 🗄️ SERVICIOS EXTERNOS PARA n8n
+# ================================
+# Este docker-compose.mongodb.yml levanta el servicio EXTERNO que n8n necesita:
+# - MongoDB: Base de datos NoSQL (almacenamiento de documentos)
+#
+# Estos servicios son COMPARTIDOS por:
+# - PC Local (docker-compose.yml)
+# - VPS Remoto (vps/docker-compose.vps.yml)
+#
+# ⚠️ IMPORTANTE: Levanta ESTO PRIMERO, antes de levantarn8n en PC o VPS
+
+services:
+
+  # ================================
+  # 🍃 MongoDB - Base de Datos NoSQL
+  # ================================
+  mongodb:
+    image: mongo:7
+    container_name: mongodb
+    restart: always # Reinicia SIEMPRE, incluso después de reboot
+
+    # Variables de entorno
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME:-KevinsAdmin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:-Kevins1612522026}
+      # IMPORTANTE para Cloudflare, confía en los headers de proxy para IP real y protocolo
+      TZ: ${TZ:-America/Bogota}
+      GENERIC_TIMEZONE: ${GENERIC_TIMEZONE:-America/Bogota}
+      # De paso arreglamos el error de X-Forwarded-For que vimos en el log
+
+      # Datos persistentes (en carpeta ./volumes/)
+    volumes:
+      - mongodb_data:/data/db
+      - ./ssl/generales:/etc/ssl/mongodb:ro
+
+    # Puertos
+    ports:
+      - "100.121.34.76:27017:27017"
+      - "127.0.0.1:27017:27017"
+
+    # Comando con SSL/TLS opcional
+    command:
+      - /bin/sh
+      - -c
+      - |
+        # Escucha en localhost + en la IP dinámica del contenedor para respetar el mapeo de puertos del yml
+        CONTAINER_IP=$$(hostname -i 2>/dev/null || echo "127.0.0.1")
+        ARGS="--replSet rs0 --bind_ip 127.0.0.1,$${CONTAINER_IP}"
+        if [ "${MONGODB_ENABLE_SSL:-false}" = "true" ]; then
+          ARGS="$$ARGS --sslMode requireSSL --sslPEMKeyFile /etc/ssl/mongodb/server.pem --sslCAFile /etc/ssl/mongodb/root.crt --sslMinProtocolVersion TLS1_3 --sslMaxProtocolVersion TLS1_3"
+        fi
+        exec mongod $$ARGS
+
+    # Healthcheck
+    healthcheck:
+      test: [ "CMD", "mongosh", "--eval", "db.adminCommand('ping')" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+    # Red
+    networks:
+      - stack-network
+
+    # Logs
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ================================
+  # 🎨 Mongo Express - Administrador
+  # ================================
+  mongo-express:
+    image: mongo-express:latest
+    container_name: n8n-mongo-express
+    restart: always # Reinicia SIEMPRE, incluso después de reboot
+
+    # Variables de entorno
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_INITDB_ROOT_USERNAME:-KevinsAdmin}
+      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:-Kevins1612522026}
+      ME_CONFIG_MONGODB_URL: ${ME_CONFIG_MONGODB_URL:-mongodb://${MONGO_INITDB_ROOT_USERNAME:-KevinsAdmin}:${MONGO_INITDB_ROOT_PASSWORD:-Kevins1612522026}@mongodb:27017/}
+      ME_CONFIG_BASICAUTH: "true"
+      ME_CONFIG_BASICAUTH_USERNAME: ${MONGO_INITDB_ROOT_USERNAME:-KevinsAdmin}
+      ME_CONFIG_BASICAUTH_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:-Kevins1612522026}
+      ME_CONFIG_SITE_COOKIESECRET: Kevins1612522026
+      ME_CONFIG_SITE_SSL_ENABLED: "false"
+      # IMPORTANTE para Cloudflare, confía en los headers de proxy para IP real y protocolo
+      TZ: ${TZ:-America/Bogota}
+      GENERIC_TIMEZONE: ${GENERIC_TIMEZONE:-America/Bogota}
+    # Puertos
+    # 8081: Mongo Express UI (para administración web)
+    ports:
+      - "100.121.34.76:8083:8081"
+      - "127.0.0.1:8083:8081"
+
+    # Dependencias
+    depends_on:
+      - mongodb
+
+    # Red
+    networks:
+      - stack-network
+    # Volúmenes para sincronizar hora local (opcional pero recomendado) 
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+
+    # Logs
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# ================================
+# 🌐 RED COMPARTIDA
+# ================================
+networks:
+  stack-network:
+    name: stack-network
+    driver: bridge
+
+volumes:
+  mongodb_data:

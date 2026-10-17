@@ -1,0 +1,43 @@
+[package]
+name = "file-service"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+[dependencies]
+common.workspace = true
+axum.workspace = true
+events.workspace = true
+proto.workspace = true
+sqlx.workspace = true
+tonic.workspace = true
+tonic-prost = "0.14"
+prost.workspace = true
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+uuid.workspace = true
+chrono.workspace = true
+thiserror.workspace = true
+anyhow.workspace = true
+tracing.workspace = true
+jsonwebtoken = "9"
+aws-sdk-s3.workspace = true
+aws-credential-types.workspace = true
+sha2.workspace = true
+hex = "0.4"
+infer = "0.19"
+reqwest.workspace = true
+zip.workspace = true
+pdf-extract.workspace = true
+async-nats.workspace = true
+futures-util.workspace = true
+metrics.workspace = true
+metrics-exporter-prometheus.workspace = true
+rand.workspace = true
+deadpool-redis.workspace = true
+httpdate.workspace = true
+tokenizers.workspace = true
+
+[dev-dependencies]
+dotenv.workspace = true
+tempfile.workspace = true

@@ -1,0 +1,56 @@
+[package]
+name = "common"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+uuid.workspace = true
+chrono.workspace = true
+rust_decimal.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+envy.workspace = true
+dotenv.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+tracing-opentelemetry.workspace = true
+opentelemetry.workspace = true
+opentelemetry_sdk.workspace = true
+opentelemetry-otlp.workspace = true
+tokio = { workspace = true, features = ["fs"] }
+tokio-stream.workspace = true
+tokio-rustls.workspace = true
+tonic.workspace = true
+axum.workspace = true
+http.workspace = true
+async-trait.workspace = true
+futures-util.workspace = true
+async-nats.workspace = true
+rustls.workspace = true
+rustls-pemfile.workspace = true
+jsonwebtoken = "9"
+aws-config.workspace = true
+aws-types.workspace = true
+aws-sdk-secretsmanager.workspace = true
+aws-sdk-ssm.workspace = true
+azure_core.workspace = true
+azure_identity.workspace = true
+azure_security_keyvault_secrets.workspace = true
+vaultrs.workspace = true
+x509-parser.workspace = true
+url.workspace = true
+hmac.workspace = true
+sha2.workspace = true
+hex = "0.4"
+sqlx.workspace = true
+deadpool-redis.workspace = true
+metrics.workspace = true
+zeroize.workspace = true
+
+[dev-dependencies]
+rcgen.workspace = true
+tempfile.workspace = true
+tokio-stream.workspace = true
+tonic-health.workspace = true

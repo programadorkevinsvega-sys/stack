@@ -1,0 +1,69 @@
+syntax = "proto3";
+
+package ai_gateway.router.v1;
+
+// Servicio de selección de cuenta AWS para enrutar una petición.
+service AccountSelectionService {
+    // Selecciona la mejor cuenta AWS para atender un modelo.
+    // Algoritmo: least-connections ponderado por headroom de TPM + circuit breaker.
+    rpc SelectAccount(SelectAccountRequest) returns (SelectAccountResponse);
+
+    // Reporta el resultado de una petición para retroalimentar el algoritmo.
+    rpc ReportOutcome(ReportOutcomeRequest) returns (ReportOutcomeResponse);
+
+    rpc ResetCircuitBreaker(ResetCircuitBreakerRequest) returns (ResetCircuitBreakerResponse);
+    rpc GetCircuitStatus(GetCircuitStatusRequest) returns (GetCircuitStatusResponse);
+    rpc GetAccountLoad(GetAccountLoadRequest) returns (GetAccountLoadResponse);
+    rpc ListAccountLoads(ListAccountLoadsRequest) returns (ListAccountLoadsResponse);
+}
+
+message SelectAccountRequest {
+    string model_catalog_id = 1;
+    string request_id = 2;
+    int64 estimated_tokens = 3;
+}
+
+message SelectAccountResponse {
+    string account_id = 1;        // UUID de la cuenta en credential-manager
+    string aws_account_id = 2;    // ID real de AWS (12 dígitos)
+    string region = 3;
+    string provider_model_id = 4; // model_id real de Bedrock
+    bool found = 5;               // false = no hay cuenta sana → 503
+}
+
+message ReportOutcomeRequest {
+    string account_id = 1;
+    string request_id = 2;
+    bool success = 3;
+    optional string error_code = 4;
+    int32 latency_ms = 5;
+    int64 input_tokens = 6;
+    int64 output_tokens = 7;
+}
+
+message ReportOutcomeResponse {
+    bool acknowledged = 1;
+}
+
+message ResetCircuitBreakerRequest { string account_id = 1; }
+message ResetCircuitBreakerResponse { bool closed = 1; }
+
+message GetCircuitStatusRequest { string account_id = 1; }
+message GetCircuitStatusResponse {
+    string account_id = 1;
+    string state = 2;
+    int64 open_until_epoch_seconds = 3;
+    int64 consecutive_failures = 4;
+}
+
+message GetAccountLoadRequest { string account_id = 1; }
+message AccountLoad {
+    string account_id = 1;
+    int64 active_connections = 2;
+    int64 current_tpm = 3;
+    int64 current_rpm = 4;
+}
+message GetAccountLoadResponse { AccountLoad load = 1; }
+
+message ListAccountLoadsRequest { string model_catalog_id = 1; }
+message ListAccountLoadsResponse { repeated AccountLoad loads = 1; }

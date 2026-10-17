@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE wallets SET reserved_balance=$2, updated_at=now() WHERE user_id=$1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Numeric"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "9957dc89c65591872fc928fa3458fe129fe8a91024fc5b0ff23049e56c0a7329"
+}
